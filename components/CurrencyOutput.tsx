@@ -1,15 +1,39 @@
-import * as React from 'react';
+'use client';
+
+import {
+  baseCurrencyAtom,
+  baseValueAtom,
+  currencyListAtom,
+  currencyRatesAtom,
+  type CurrencyRate,
+} from '@/lib/atoms';
+import { useAtomValue } from 'jotai';
+
+function convert(
+  amount: number,
+  baseCurrency: string,
+  toCurrency: string,
+  currencyRates: CurrencyRate
+) {
+  if (baseCurrency === 'USD') {
+    return amount * currencyRates.usd[toCurrency.toLowerCase()];
+  }
+  const usdRate = currencyRates.usd[baseCurrency.toLowerCase()];
+  return amount * (1 / usdRate) * currencyRates.usd[toCurrency.toLowerCase()];
+}
 
 const CurrencyOutput = () => {
-  const currencies = [
-    { name: 'USD', code: 'USD' },
-    { name: 'EUR', code: 'EUR' },
-    { name: 'GBP', code: 'GBP' },
-  ];
+  const baseValue = useAtomValue(baseValueAtom);
+  const baseCurrency = useAtomValue(baseCurrencyAtom);
+  const currencyList = useAtomValue(currencyListAtom);
+  const currencyRates = useAtomValue(currencyRatesAtom);
   return (
     <div>
-      {currencies.map((currency) => (
-        <div key={currency.code}>{currency.name}</div>
+      {currencyList.map((currency) => (
+        <div key={currency}>
+          {currency}:{' '}
+          {convert(baseValue, baseCurrency, currency, currencyRates)}
+        </div>
       ))}
     </div>
   );
