@@ -5,34 +5,36 @@ import {
   baseValueAtom,
   currencyListAtom,
   currencyRatesAtom,
-  type CurrencyRate,
 } from '@/lib/atoms';
-import { useAtomValue } from 'jotai';
-
-function convert(
-  amount: number,
-  baseCurrency: string,
-  toCurrency: string,
-  currencyRates: CurrencyRate
-) {
-  if (baseCurrency === 'USD') {
-    return amount * currencyRates.usd[toCurrency.toLowerCase()];
-  }
-  const usdRate = currencyRates.usd[baseCurrency.toLowerCase()];
-  return amount * (1 / usdRate) * currencyRates.usd[toCurrency.toLowerCase()];
-}
+import { convert } from '@/lib/currency';
+import { useAtom, useAtomValue } from 'jotai';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const CurrencyOutput = () => {
-  const baseValue = useAtomValue(baseValueAtom);
-  const baseCurrency = useAtomValue(baseCurrencyAtom);
+  const [baseValue, setBaseValue] = useAtom(baseValueAtom);
+  const [baseCurrency, setBaseCurrency] = useAtom(baseCurrencyAtom);
   const currencyList = useAtomValue(currencyListAtom);
   const currencyRates = useAtomValue(currencyRatesAtom);
   return (
-    <div>
+    <div className="flex flex-col gap-y-2">
       {currencyList.map((currency) => (
         <div key={currency}>
-          {currency}:{' '}
-          {convert(baseValue, baseCurrency, currency, currencyRates)}
+          <Label htmlFor={currency}>{currency}</Label>
+          <Input
+            key={currency}
+            id={currency}
+            type="number"
+            value={convert(baseValue, baseCurrency, currency, currencyRates)}
+            onFocus={(e) => {
+              setBaseCurrency(currency);
+              setBaseValue(Number(e.target.value));
+            }}
+            onChange={(e) => {
+              setBaseCurrency(currency);
+              setBaseValue(Number(e.target.value));
+            }}
+          />
         </div>
       ))}
     </div>

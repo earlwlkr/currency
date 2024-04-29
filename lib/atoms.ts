@@ -9,6 +9,7 @@ export type CurrencyRate = {
 export const baseValueAtom = atomWithStorage('baseValue', 100);
 export const baseCurrencyAtom = atomWithStorage('baseCurrency', 'USD');
 export const currencyListAtom = atomWithStorage('currencyList', ['USD', 'VND']);
+
 // https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json
 export const currencyRatesAtom = atomWithStorage(
   'currencyRates',

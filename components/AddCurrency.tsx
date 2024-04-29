@@ -31,12 +31,12 @@ const AddCurrency = () => {
         getRootProps,
       }) => (
         <div>
-          <label {...getLabelProps()}>Enter a currency</label>
+          {/* <label {...getLabelProps()}>Enter a currency</label> */}
           <div
-            style={{ display: 'inline-block' }}
+            className="inline-block mt-4"
             {...getRootProps({}, { suppressRefError: true })}
           >
-            <Input placeholder="Search currency..." {...getInputProps()} />
+            <Input placeholder="Add another currency..." {...getInputProps()} />
           </div>
           <ul {...getMenuProps()}>
             {isOpen
