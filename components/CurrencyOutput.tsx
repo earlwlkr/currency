@@ -1,11 +1,6 @@
 'use client';
 
-import {
-  baseCurrencyAtom,
-  baseValueAtom,
-  currencyListAtom,
-  currencyRatesAtom,
-} from '@/lib/atoms';
+import { baseCurrencyAtom, baseValueAtom, currencyListAtom } from '@/lib/atoms';
 import { convert } from '@/lib/currency';
 import { useAtom, useAtomValue } from 'jotai';
 import { Input } from '@/components/ui/input';
@@ -15,7 +10,6 @@ const CurrencyOutput = () => {
   const [baseValue, setBaseValue] = useAtom(baseValueAtom);
   const [baseCurrency, setBaseCurrency] = useAtom(baseCurrencyAtom);
   const currencyList = useAtomValue(currencyListAtom);
-  const currencyRates = useAtomValue(currencyRatesAtom);
   return (
     <div className="flex flex-col gap-y-2">
       {currencyList.map((currency) => (
@@ -25,11 +19,7 @@ const CurrencyOutput = () => {
             key={currency}
             id={currency}
             type="number"
-            value={convert(baseValue, baseCurrency, currency, currencyRates)}
-            onFocus={(e) => {
-              setBaseCurrency(currency);
-              setBaseValue(Number(e.target.value));
-            }}
+            value={convert(baseValue, baseCurrency, currency)}
             onChange={(e) => {
               setBaseCurrency(currency);
               setBaseValue(Number(e.target.value));
