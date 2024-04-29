@@ -1,6 +1,6 @@
-import { atomWithStorage } from 'jotai/utils';
-import currencyRatesData from '@/config/currency-rates.json';
-import { createStore } from 'jotai';
+import { atomWithStorage, loadable } from 'jotai/utils';
+import { atom, createStore } from 'jotai';
+import { SyncStorage } from 'jotai/vanilla/utils/atomWithStorage';
 
 export type CurrencyRates = {
   date: string;
@@ -11,10 +11,38 @@ export const baseValueAtom = atomWithStorage('baseValue', 100);
 export const baseCurrencyAtom = atomWithStorage('baseCurrency', 'USD');
 export const currencyListAtom = atomWithStorage('currencyList', ['USD', 'VND']);
 
-// https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json
-export const currencyRatesAtom = atomWithStorage<CurrencyRates>(
-  'currencyRates',
-  currencyRatesData
+const customStorage: SyncStorage<number> = {
+  getItem: (key: string) => Number(localStorage.getItem(key)) || 0,
+  setItem: (key: string, value: number) =>
+    localStorage.setItem(key, value.toString()),
+  removeItem: (key: string) => localStorage.removeItem(key),
+};
+
+export const lastFetchCurrencyRatesAtom = atomWithStorage(
+  'lastFetchCurrencyRates',
+  0,
+  customStorage,
+  {
+    getOnInit: true,
+  }
 );
+
+const HALF_DAY = 12 * 60 * 60 * 1000;
+export const currencyRatesAsyncAtom = atom(async (get, { signal }) => {
+  const lastFetchCurrencyRates = get(lastFetchCurrencyRatesAtom);
+  if (Date.now() - lastFetchCurrencyRates < HALF_DAY) {
+    return JSON.parse(localStorage.getItem('currencyRates') || '{}');
+  }
+
+  const response = await fetch(
+    'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json',
+    { signal }
+  );
+  const currencyRates = await response.json();
+  localStorage.setItem('currencyRates', JSON.stringify(currencyRates));
+  localStorage.setItem('lastFetchCurrencyRates', Date.now().toString());
+  return currencyRates;
+});
+export const currencyRatesAtom = loadable(currencyRatesAsyncAtom);
 
 export const store = createStore();

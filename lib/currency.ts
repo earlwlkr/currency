@@ -16,10 +16,13 @@ export function convert(
     return amount;
   }
   const currencyRates = store.get(currencyRatesAtom);
-  const usdAmount = amount * currencyRates.usd[toCurrency.toLowerCase()];
+  if (currencyRates.state !== 'hasData') return '';
+  const currencyRatesData = currencyRates.data;
+
+  const usdAmount = amount * currencyRatesData.usd[toCurrency.toLowerCase()];
   if (baseCurrency !== 'USD') {
     return formatter.format(
-      usdAmount / currencyRates.usd[baseCurrency.toLowerCase()]
+      usdAmount / currencyRatesData.usd[baseCurrency.toLowerCase()]
     );
   }
   return formatter.format(usdAmount);
