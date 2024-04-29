@@ -21,7 +21,7 @@ const CurrencyOutput = () => {
             value={convert(baseValue, baseCurrency, currency)}
             onChange={(e) => {
               setBaseCurrency(currency);
-              const value = Number(e.target.value);
+              const value = Number(e.target.value.replace(/[^0-9.-]+/g, ''));
               if (!isNaN(value)) setBaseValue(value);
             }}
           />
