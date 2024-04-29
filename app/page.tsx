@@ -1,3 +1,4 @@
+import { AddCurrency } from '@/components/AddCurrency';
 import { CurrencyInput } from '@/components/CurrencyInput';
 import { CurrencyOutput } from '@/components/CurrencyOutput';
 
@@ -9,6 +10,9 @@ export default function Home() {
       </div>
       <div className="w-full px-4 sm:w-1/2">
         <CurrencyOutput />
+      </div>
+      <div className="w-full px-4 sm:w-1/2">
+        <AddCurrency />
       </div>
     </main>
   );
