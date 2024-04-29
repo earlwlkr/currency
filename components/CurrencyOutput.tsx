@@ -18,11 +18,11 @@ const CurrencyOutput = () => {
           <Input
             key={currency}
             id={currency}
-            type="number"
             value={convert(baseValue, baseCurrency, currency)}
             onChange={(e) => {
               setBaseCurrency(currency);
-              setBaseValue(Number(e.target.value));
+              const value = Number(e.target.value);
+              if (!isNaN(value)) setBaseValue(value);
             }}
           />
         </div>

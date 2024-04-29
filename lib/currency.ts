@@ -5,6 +5,8 @@ type CurrencyRate = {
   usd: Record<string, number>;
 };
 
+const formatter = Intl.NumberFormat('en-US');
+
 export function convert(
   amount: number,
   baseCurrency: string,
@@ -16,7 +18,9 @@ export function convert(
   const currencyRates = store.get(currencyRatesAtom);
   const usdAmount = amount * currencyRates.usd[toCurrency.toLowerCase()];
   if (baseCurrency !== 'USD') {
-    return usdAmount / currencyRates.usd[baseCurrency.toLowerCase()];
+    return formatter.format(
+      usdAmount / currencyRates.usd[baseCurrency.toLowerCase()]
+    );
   }
-  return usdAmount;
+  return formatter.format(usdAmount);
 }
