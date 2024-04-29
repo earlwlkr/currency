@@ -12,10 +12,22 @@ export const baseCurrencyAtom = atomWithStorage('baseCurrency', 'USD');
 export const currencyListAtom = atomWithStorage('currencyList', ['USD', 'VND']);
 
 const customStorage: SyncStorage<number> = {
-  getItem: (key: string) => Number(localStorage.getItem(key)) || 0,
-  setItem: (key: string, value: number) =>
-    localStorage.setItem(key, value.toString()),
-  removeItem: (key: string) => localStorage.removeItem(key),
+  getItem: (key: string) => {
+    if (typeof localStorage !== 'undefined') {
+      return Number(localStorage.getItem(key)) || 0;
+    }
+    return 0;
+  },
+  setItem: (key: string, value: number) => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(key, value.toString());
+    }
+  },
+  removeItem: (key: string) => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(key);
+    }
+  },
 };
 
 export const lastFetchCurrencyRatesAtom = atomWithStorage(
