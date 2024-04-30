@@ -7,6 +7,7 @@ import countryByCurrencyCode from '@/config/country-by-currency-code.json';
 import { currencyListAtom } from '@/lib/atoms';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 const AddCurrency = () => {
   const [currencyList, setCurrencyList] = useAtom(currencyListAtom);
@@ -54,16 +55,14 @@ const AddCurrency = () => {
                 .map((item, index) => (
                   <div
                     key={item.country + item.currency_code}
-                    className="p-2 m-2 rounded-md"
+                    className={cn(
+                      'p-2 mx-2 my-1 rounded-md',
+                      highlightedIndex === index ? 'bg-slate-700' : '',
+                      selectedItem === item ? 'bold' : ''
+                    )}
                     {...getItemProps({
-                      // key: item.currency_code,
                       index,
                       item,
-                      style: {
-                        backgroundColor:
-                          highlightedIndex === index ? 'lightgray' : 'white',
-                        fontWeight: selectedItem === item ? 'bold' : 'normal',
-                      },
                     })}
                   >
                     {item.country} - {item.currency_code}
