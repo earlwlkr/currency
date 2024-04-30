@@ -27,6 +27,10 @@ export const currencyRatesAsyncAtom = atom(async (get, { signal }) => {
     return {};
   }
   const lastFetchCurrencyRates = await get(lastFetchCurrencyRatesAtom);
+  console.log(
+    'last fetch currency rates:',
+    new Date(lastFetchCurrencyRates).toLocaleString()
+  );
   if (Date.now() - lastFetchCurrencyRates < HALF_DAY) {
     const storageData = await getIdb<string>('currencyRates');
     return JSON.parse(storageData || '{}');
