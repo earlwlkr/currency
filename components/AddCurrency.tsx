@@ -38,12 +38,11 @@ const AddCurrency = () => {
             <Input placeholder="Add another currency..." {...getInputProps()} />
           </div>
 
-          {isOpen ? (
+          {isOpen && inputValue ? (
             <ScrollArea className="mt-2 h-40 rounded-md border">
               {countryByCurrencyCode
                 .filter(
                   (item) =>
-                    inputValue &&
                     item.currency_code &&
                     (item.country
                       .toLowerCase()
