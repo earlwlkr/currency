@@ -1,27 +1,35 @@
 import { get, set, del } from 'idb-keyval';
 import { atomWithStorage } from 'jotai/utils';
 
-export function atomWithAsyncStorage<T>(key: string, initial: T) {
+export function atomWithAsyncStorage<T>(key: string, initialValue: T) {
   return atomWithStorage<T>(
     key,
-    initial,
+    initialValue,
     {
-      setItem: (key, value) => set(key, value),
-      getItem: (key) =>
-        get<T>(key).then((value) => {
-          console.log('get1', value, initial);
-          if (value !== undefined) {
-            return value;
-          }
-          console.log('get2', value, initial);
-          if (initial !== undefined) {
-            set(key, initial);
-          }
-          console.log('get3', value, initial);
-          return initial;
-        }),
+      setItem: (key, value) => {
+        if (typeof indexedDB !== 'undefined') {
+          return set(key, value);
+        }
+        return Promise.resolve();
+      },
+      getItem: async (key) => {
+        if (typeof indexedDB === 'undefined') {
+          return Promise.resolve(initialValue);
+        }
+        const value_1 = await get<T>(key);
+        if (value_1 !== undefined) {
+          return value_1;
+        }
+        if (initialValue !== undefined) {
+          set(key, initialValue);
+        }
+        return initialValue;
+      },
       removeItem: (key: string) => {
-        return del(key);
+        if (typeof indexedDB !== 'undefined') {
+          return del(key);
+        }
+        return Promise.resolve();
       },
     },
     {

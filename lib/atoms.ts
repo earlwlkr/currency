@@ -23,6 +23,9 @@ export const lastFetchCurrencyRatesAtom = atomWithAsyncStorage(
 
 const HALF_DAY = 12 * 60 * 60 * 1000;
 export const currencyRatesAsyncAtom = atom(async (get, { signal }) => {
+  if (typeof indexedDB === 'undefined') {
+    return {};
+  }
   const lastFetchCurrencyRates = await get(lastFetchCurrencyRatesAtom);
   if (Date.now() - lastFetchCurrencyRates < HALF_DAY) {
     const storageData = await getIdb<string>('currencyRates');
