@@ -1,27 +1,24 @@
-const path = require('path');
-const NextPWA = require('next-pwa');
+import path from 'path';
+import NextPWA from 'next-pwa';
+import { createRequire } from 'node:module';
+
+const isDev = process.env.NODE_ENV === 'development';
 
 const withPWA = NextPWA({
   dest: 'public',
-  // disable: process.env.NODE_ENV === 'development',
+  disable: isDev,
   // register: true,
   skipWaiting: true,
-  buildExcludes: ['app-build-manifest.json'],
-  // fallbacks: {
-  //   document: '/',
-  // },
 });
 
 const generateAppDirEntry = (entry) => {
+  const require = createRequire(import.meta.url);
   const packagePath = require.resolve('next-pwa');
-
   const packageDirectory = path.dirname(packagePath);
-
   const registerJs = path.join(packageDirectory, 'register.js');
 
   return entry().then((entries) => {
     // Register SW on App directory, solution: https://github.com/shadowwalker/next-pwa/pull/427
-
     if (entries['main-app'] && !entries['main-app'].includes(registerJs)) {
       if (Array.isArray(entries['main-app'])) {
         entries['main-app'].unshift(registerJs);
@@ -34,22 +31,19 @@ const generateAppDirEntry = (entry) => {
   });
 };
 
-const isDev = process.env.NODE_ENV !== 'production';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // output: 'export',
 
   webpack(config) {
     if (!isDev) {
       const entry = generateAppDirEntry(config.entry);
-
       config.entry = () => entry;
     }
 
     return config;
   },
-
-  // output: 'export',
 };
 
-module.exports = withPWA(nextConfig);
+export default withPWA(nextConfig);
