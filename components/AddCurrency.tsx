@@ -1,6 +1,6 @@
 'use client';
 
-import Downshift from 'downshift';
+import Downshift, { DownshiftState, StateChangeOptions } from 'downshift';
 import { useAtom } from 'jotai';
 
 import countryByCurrencyCode from '@/config/country-by-currency-code.json';
@@ -9,17 +9,39 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
+function stateReducer(
+  state: DownshiftState<any>,
+  changes: StateChangeOptions<any>
+) {
+  // this prevents the menu from being closed when the user
+  // selects an item with a keyboard or mouse
+  switch (changes.type) {
+    case Downshift.stateChangeTypes.keyDownEnter:
+    case Downshift.stateChangeTypes.clickItem:
+      return {
+        ...changes,
+        inputValue: '',
+      };
+    default:
+      return changes;
+  }
+}
+
 const AddCurrency = () => {
   const [currencyList, setCurrencyList] = useAtom(currencyListAtom);
 
   return (
     <Downshift
       onChange={(selection) => {
+        if (!selection) {
+          return;
+        }
         if (!currencyList.includes(selection.currency_code)) {
           setCurrencyList([...currencyList, selection.currency_code]);
         }
       }}
       itemToString={(item) => (item ? item.currency_code : '')}
+      stateReducer={stateReducer}
     >
       {({
         getInputProps,
@@ -29,13 +51,35 @@ const AddCurrency = () => {
         highlightedIndex,
         selectedItem,
         getRootProps,
+        selectItemAtIndex,
       }) => (
         <div>
           <div
             className="inline-block mt-4"
             {...getRootProps({}, { suppressRefError: true })}
           >
-            <Input placeholder="Add another currency..." {...getInputProps()} />
+            <Input
+              placeholder="Add another currency..."
+              {...getInputProps({
+                onKeyDown: (e) => {
+                  if (e.key === 'Enter' && inputValue && !highlightedIndex) {
+                    const options = countryByCurrencyCode.filter(
+                      (item) =>
+                        item.currency_code &&
+                        (item.country
+                          .toLowerCase()
+                          .includes(inputValue.toLowerCase()) ||
+                          item.currency_code
+                            .toLowerCase()
+                            .includes(inputValue.toLowerCase()))
+                    );
+                    if (options.length > 0) {
+                      selectItemAtIndex(0);
+                    }
+                  }
+                },
+              })}
+            />
           </div>
 
           {isOpen && inputValue ? (
