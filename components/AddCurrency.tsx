@@ -27,6 +27,21 @@ function stateReducer(
   }
 }
 
+function getMatchingItems(
+  inputValue: string,
+  items: typeof countryByCurrencyCode
+) {
+  if (!inputValue) {
+    return items;
+  }
+  return items.filter(
+    (item) =>
+      item.currency_code &&
+      (item.country.toLowerCase().includes(inputValue.toLowerCase()) ||
+        item.currency_code.toLowerCase().includes(inputValue.toLowerCase()))
+  );
+}
+
 const AddCurrency = () => {
   const [currencyList, setCurrencyList] = useAtom(currencyListAtom);
 
@@ -44,13 +59,14 @@ const AddCurrency = () => {
       stateReducer={stateReducer}
     >
       {({
+        getRootProps,
         getInputProps,
+        getMenuProps,
         getItemProps,
         isOpen,
         inputValue,
         highlightedIndex,
         selectedItem,
-        getRootProps,
         selectItemAtIndex,
       }) => (
         <div>
@@ -63,15 +79,9 @@ const AddCurrency = () => {
               {...getInputProps({
                 onKeyDown: (e) => {
                   if (e.key === 'Enter' && inputValue && !highlightedIndex) {
-                    const options = countryByCurrencyCode.filter(
-                      (item) =>
-                        item.currency_code &&
-                        (item.country
-                          .toLowerCase()
-                          .includes(inputValue.toLowerCase()) ||
-                          item.currency_code
-                            .toLowerCase()
-                            .includes(inputValue.toLowerCase()))
+                    const options = getMatchingItems(
+                      inputValue,
+                      countryByCurrencyCode
                     );
                     if (options.length > 0) {
                       selectItemAtIndex(0);
@@ -83,19 +93,12 @@ const AddCurrency = () => {
           </div>
 
           {isOpen && inputValue ? (
-            <ScrollArea className="mt-2 h-40 rounded-md border">
-              {countryByCurrencyCode
-                .filter(
-                  (item) =>
-                    item.currency_code &&
-                    (item.country
-                      .toLowerCase()
-                      .includes(inputValue.toLowerCase()) ||
-                      item.currency_code
-                        .toLowerCase()
-                        .includes(inputValue.toLowerCase()))
-                )
-                .map((item, index) => (
+            <ScrollArea
+              {...getMenuProps()}
+              className="mt-2 h-40 rounded-md border"
+            >
+              {getMatchingItems(inputValue, countryByCurrencyCode).map(
+                (item, index) => (
                   <div
                     key={item.country + item.currency_code}
                     className={cn(
@@ -110,7 +113,8 @@ const AddCurrency = () => {
                   >
                     {item.country} - {item.currency_code}
                   </div>
-                ))}
+                )
+              )}
             </ScrollArea>
           ) : null}
         </div>
