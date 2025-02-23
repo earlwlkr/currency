@@ -1,18 +1,18 @@
-'use client';
+"use client";
 
-import { useAtom } from 'jotai';
-import { GripVertical, Trash2 } from 'lucide-react';
+import { useAtom } from "jotai";
+import { GripVertical, Trash2 } from "lucide-react";
 
-import { baseCurrencyAtom, baseValueAtom, currencyListAtom } from '@/lib/atoms';
-import { convert } from '@/lib/currency';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { baseCurrencyAtom, baseValueAtom, currencyListAtom } from "@/lib/atoms";
+import { convert } from "@/lib/currency";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 
 const CurrencyOutput = () => {
   const [baseValue, setBaseValue] = useAtom(baseValueAtom);
@@ -23,8 +23,10 @@ const CurrencyOutput = () => {
     <div className="flex flex-col gap-y-2">
       {currencyList.map((currency) => (
         <div key={currency}>
-          <Label htmlFor={currency}>{currency}</Label>
           <div className="flex items-center">
+            <Label htmlFor={currency} className="mr-2">
+              {currency}
+            </Label>
             <Input
               key={currency}
               id={currency}
@@ -32,7 +34,7 @@ const CurrencyOutput = () => {
               autoComplete="off"
               onChange={(e) => {
                 setBaseCurrency(currency);
-                const value = Number(e.target.value.replace(/[^0-9.-]+/g, ''));
+                const value = Number(e.target.value.replace(/[^0-9.-]+/g, ""));
                 if (!isNaN(value)) setBaseValue(value);
               }}
             />
