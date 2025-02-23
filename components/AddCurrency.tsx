@@ -8,6 +8,7 @@ import { currencyListAtom } from '@/lib/atoms';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { useRef } from 'react';
 
 function stateReducer(
   state: DownshiftState<any>,
@@ -44,6 +45,7 @@ function getMatchingItems(
 
 const AddCurrency = () => {
   const [currencyList, setCurrencyList] = useAtom(currencyListAtom);
+  const currencies = useRef(countryByCurrencyCode);
 
   return (
     <Downshift
@@ -65,6 +67,7 @@ const AddCurrency = () => {
         getItemProps,
         isOpen,
         inputValue,
+        clearSelection,
         highlightedIndex,
         selectedItem,
         selectItemAtIndex,
@@ -78,13 +81,17 @@ const AddCurrency = () => {
               placeholder="Add another currency..."
               {...getInputProps({
                 onKeyDown: (e) => {
-                  if (e.key === 'Enter' && inputValue && !highlightedIndex) {
-                    const options = getMatchingItems(
-                      inputValue,
-                      countryByCurrencyCode
-                    );
-                    if (options.length > 0) {
-                      selectItemAtIndex(0);
+                  if (inputValue) {
+                    if (['Enter', 'Tab'].includes(e.key) && !highlightedIndex) {
+                      e.preventDefault();
+                      const options = getMatchingItems(
+                        inputValue,
+                        currencies.current
+                      );
+                      if (options.length > 0) {
+                        selectItemAtIndex(0);
+                        clearSelection();
+                      }
                     }
                   }
                 },
@@ -97,7 +104,7 @@ const AddCurrency = () => {
               {...getMenuProps()}
               className="mt-2 h-40 rounded-md border"
             >
-              {getMatchingItems(inputValue, countryByCurrencyCode).map(
+              {getMatchingItems(inputValue, currencies.current).map(
                 (item, index) => (
                   <div
                     key={item.country + item.currency_code}
