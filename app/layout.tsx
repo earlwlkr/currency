@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/react';
+import type { Viewport } from 'next';
 
 import './globals.css';
 
@@ -22,6 +23,11 @@ export const metadata: Metadata = {
     { rel: 'apple-touch-icon', url: 'icons/icon-192x192.png' },
     { rel: 'icon', url: 'icons/icon-192x192.png' },
   ],
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  userScalable: false,
 };
 
 export default function RootLayout({
