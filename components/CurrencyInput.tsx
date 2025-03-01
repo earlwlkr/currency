@@ -79,6 +79,7 @@ const CurrencyInput = () => {
           >
             <Input
               placeholder="Add another currency..."
+              className="text-lg"
               {...getInputProps({
                 onKeyDown: (e) => {
                   if (inputValue) {

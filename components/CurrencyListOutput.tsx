@@ -24,12 +24,13 @@ const CurrencyListOutput = () => {
       {currencyList.map((currency) => (
         <div key={currency}>
           <div className="flex items-center">
-            <Label htmlFor={currency} className="mr-2">
+            <Label htmlFor={currency} className="mr-2 text-lg">
               {currency}
             </Label>
             <Input
               key={currency}
               id={currency}
+              className="text-lg my-2"
               value={convert(baseValue, baseCurrency, currency)}
               autoComplete="off"
               onChange={(e) => {
