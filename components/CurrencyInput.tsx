@@ -43,7 +43,7 @@ function getMatchingItems(
   );
 }
 
-const AddCurrency = () => {
+const CurrencyInput = () => {
   const [currencyList, setCurrencyList] = useAtom(currencyListAtom);
   const currencies = useRef(countryByCurrencyCode);
 
@@ -130,4 +130,4 @@ const AddCurrency = () => {
   );
 };
 
-export { AddCurrency };
+export { CurrencyInput };
