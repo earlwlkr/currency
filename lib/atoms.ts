@@ -9,6 +9,11 @@ export type CurrencyRates = {
   usd: Record<string, number>;
 };
 
+export const baseAccordionAtom = atomWithAsyncStorage(
+  'baseAccordion',
+  'currency'
+);
+
 export const baseValueAtom = atomWithAsyncStorage('baseValue', 100);
 export const baseCurrencyAtom = atomWithAsyncStorage('baseCurrency', 'USD');
 export const currencyListAtom = atomWithAsyncStorage('currencyList', [

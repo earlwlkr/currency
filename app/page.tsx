@@ -1,42 +1,44 @@
+'use client';
+
 import { CurrencyInput } from '@/components/CurrencyInput';
 import { CurrencyListOutput } from '@/components/CurrencyListOutput';
+import { TimezoneConverter } from '@/components/TimezoneConverter';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-
-const convertTimezone = (date: Date) => {
-  const targetTimeZone = 'America/New_York';
-
-  const options = {
-    timeZone: targetTimeZone,
-    hour: '2-digit',
-    minute: '2-digit',
-    // timeZoneName: 'long',
-  };
-  const formatter = new Intl.DateTimeFormat('en-US', options);
-  const formattedDate = formatter.format(date);
-
-  return formattedDate;
-};
+import { baseAccordionAtom } from '@/lib/atoms';
+import { useAtom } from 'jotai';
 
 export default function Home() {
+  const [baseAccordion, setBaseAccordion] = useAtom(baseAccordionAtom);
+
   return (
     <main className="flex min-h-screen flex-col items-center pt-4">
       <div className="w-full px-4 sm:w-1/4">
-        <Accordion type="single" collapsible className="w-full">
-          <AccordionItem value="item-1">
-            <AccordionTrigger>Currency</AccordionTrigger>
-            <AccordionContent>
+        <Accordion
+          type="single"
+          collapsible
+          defaultValue={baseAccordion}
+          onValueChange={(value) => {
+            setBaseAccordion(value);
+          }}
+          className="w-full"
+        >
+          <AccordionItem value="currency">
+            <AccordionTrigger className="px-1">Currency</AccordionTrigger>
+            <AccordionContent className="px-1">
               <CurrencyListOutput />
               <CurrencyInput />
             </AccordionContent>
           </AccordionItem>
-          <AccordionItem value="item-2">
-            <AccordionTrigger>Timezone</AccordionTrigger>
-            <AccordionContent>{convertTimezone(new Date())}</AccordionContent>
+          <AccordionItem value="timezone">
+            <AccordionTrigger className="px-1">Timezone</AccordionTrigger>
+            <AccordionContent className="px-1">
+              <TimezoneConverter />
+            </AccordionContent>
           </AccordionItem>
         </Accordion>
       </div>
