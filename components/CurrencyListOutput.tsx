@@ -2,7 +2,6 @@
 
 import { GripVertical, Trash2 } from 'lucide-react';
 
-import { convert } from '@/lib/currency';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -21,6 +20,7 @@ const CurrencyListOutput = () => {
     setBaseCurrency,
     currenciesList,
     setCurrenciesList,
+    convertCurrency,
   } = useCurrencyContext();
 
   return (
@@ -35,7 +35,7 @@ const CurrencyListOutput = () => {
               key={currency}
               id={currency}
               className="text-lg my-2"
-              value={convert(baseValue, baseCurrency, currency)}
+              value={convertCurrency(baseValue, currency)}
               autoComplete="off"
               onChange={(e) => {
                 setBaseCurrency(currency);
