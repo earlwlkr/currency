@@ -1,9 +1,7 @@
 'use client';
 
-import { useAtom } from 'jotai';
 import { GripVertical, Trash2 } from 'lucide-react';
 
-import { baseCurrencyAtom, baseValueAtom, currencyListAtom } from '@/lib/atoms';
 import { convert } from '@/lib/currency';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,15 +11,21 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
+import { useCurrencyContext } from '@/lib/CurrencyContext';
 
 const CurrencyListOutput = () => {
-  const [baseValue, setBaseValue] = useAtom(baseValueAtom);
-  const [baseCurrency, setBaseCurrency] = useAtom(baseCurrencyAtom);
-  const [currencyList, setCurrencyList] = useAtom(currencyListAtom);
+  const {
+    baseValue,
+    setBaseValue,
+    baseCurrency,
+    setBaseCurrency,
+    currenciesList,
+    setCurrenciesList,
+  } = useCurrencyContext();
 
   return (
     <div className="flex flex-col gap-y-2">
-      {currencyList.map((currency) => (
+      {currenciesList.map((currency) => (
         <div key={currency}>
           <div className="flex items-center">
             <Label htmlFor={currency} className="mr-2 text-lg">
@@ -48,9 +52,11 @@ const CurrencyListOutput = () => {
                 <DropdownMenuItem
                   className="cursor-pointer"
                   onClick={() => {
-                    setCurrencyList(currencyList.filter((c) => c !== currency));
+                    setCurrenciesList(
+                      currenciesList.filter((c) => c !== currency)
+                    );
                     if (baseCurrency === currency) {
-                      setBaseCurrency(currencyList[0]);
+                      setBaseCurrency(currenciesList[0]);
                     }
                   }}
                 >

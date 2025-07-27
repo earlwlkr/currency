@@ -10,6 +10,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { baseAccordionAtom } from '@/lib/atoms';
+import { CurrencyProvider } from '@/lib/CurrencyContext';
 import { useAtom } from 'jotai';
 
 export default function Home() {
@@ -30,8 +31,10 @@ export default function Home() {
           <AccordionItem value="currency">
             <AccordionTrigger className="px-1">Currency</AccordionTrigger>
             <AccordionContent className="px-1">
-              <CurrencyListOutput />
-              <CurrencyInput />
+              <CurrencyProvider>
+                <CurrencyListOutput />
+                <CurrencyInput />
+              </CurrencyProvider>
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="timezone">

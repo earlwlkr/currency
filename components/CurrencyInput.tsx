@@ -1,14 +1,13 @@
 'use client';
 
 import Downshift, { DownshiftState, StateChangeOptions } from 'downshift';
-import { useAtom } from 'jotai';
 
 import countryByCurrencyCode from '@/config/country-by-currency-code.json';
-import { currencyListAtom } from '@/lib/atoms';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useRef } from 'react';
+import { useCurrencyContext } from '@/lib/CurrencyContext';
 
 function stateReducer(
   state: DownshiftState<any>,
@@ -44,7 +43,7 @@ function getMatchingItems(
 }
 
 const CurrencyInput = () => {
-  const [currencyList, setCurrencyList] = useAtom(currencyListAtom);
+  const { currenciesList, setCurrenciesList } = useCurrencyContext();
   const currencies = useRef(countryByCurrencyCode);
 
   return (
@@ -53,8 +52,8 @@ const CurrencyInput = () => {
         if (!selection) {
           return;
         }
-        if (!currencyList.includes(selection.currency_code)) {
-          setCurrencyList([...currencyList, selection.currency_code]);
+        if (!currenciesList.includes(selection.currency_code)) {
+          setCurrenciesList([...currenciesList, selection.currency_code]);
         }
       }}
       itemToString={(item) => (item ? item.currency_code : '')}

@@ -14,13 +14,6 @@ export const baseAccordionAtom = atomWithAsyncStorage(
   'currency'
 );
 
-export const baseValueAtom = atomWithAsyncStorage('baseValue', 100);
-export const baseCurrencyAtom = atomWithAsyncStorage('baseCurrency', 'USD');
-export const currencyListAtom = atomWithAsyncStorage('currencyList', [
-  'USD',
-  'VND',
-]);
-
 export const lastFetchCurrencyRatesAtom = atomWithAsyncStorage(
   'lastFetchCurrencyRates',
   0
