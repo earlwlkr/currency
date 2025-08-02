@@ -53,15 +53,18 @@ const formatter = Intl.NumberFormat('en-US');
 
 export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
   const [baseValue, setBaseValue] = useState<number>(() =>
-    localStorage.getItem('baseValue')
+    typeof window !== 'undefined' && localStorage.getItem('baseValue')
       ? Number(localStorage.getItem('baseValue'))
       : 100
   );
   const [baseCurrency, setBaseCurrency] = useState<string>(
-    () => localStorage.getItem('baseCurrency') || 'USD'
+    () =>
+      (typeof window !== 'undefined' && localStorage.getItem('baseCurrency')) ||
+      'USD'
   );
   const [currenciesList, setCurrenciesList] = useState<string[]>(() => {
-    const storedList = localStorage.getItem('currenciesList');
+    const storedList =
+      typeof window !== 'undefined' && localStorage.getItem('currenciesList');
     return storedList ? JSON.parse(storedList) : ['USD', 'VND'];
   });
   const [currenciesRates, setCurrenciesRates] = useState<{
