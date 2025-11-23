@@ -1,15 +1,9 @@
 'use client';
 
-import { GripVertical, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from '@/components/ui/dropdown-menu';
 import { useCurrencyContext } from '@/lib/CurrencyContext';
 
 const CurrencyListOutput = () => {
@@ -44,27 +38,20 @@ const CurrencyListOutput = () => {
               }}
             />
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <GripVertical className="h-8 w-8 ml-2 px-1 rounded-md cursor-pointer hover:bg-slate-700" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56">
-                <DropdownMenuItem
-                  className="cursor-pointer"
-                  onClick={() => {
-                    setCurrenciesList(
-                      currenciesList.filter((c) => c !== currency)
-                    );
-                    if (baseCurrency === currency) {
-                      setBaseCurrency(currenciesList[0]);
-                    }
-                  }}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Remove
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <button
+              onClick={() => {
+                setCurrenciesList(
+                  currenciesList.filter((c) => c !== currency)
+                );
+                if (baseCurrency === currency) {
+                  setBaseCurrency(currenciesList[0]);
+                }
+              }}
+              className="ml-2 px-1 text-muted-foreground hover:text-red-500 transition-colors"
+              aria-label={`Remove ${currency}`}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
           </div>
         </div>
       ))}

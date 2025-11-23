@@ -109,7 +109,12 @@ export const TimezoneInput = () => {
                       item,
                     })}
                   >
-                    {formatTimezone(item)}
+                    <div className="flex flex-col">
+                      <span className="font-bold">{formatTimezone(item).main}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatTimezone(item).sub}
+                      </span>
+                    </div>
                   </div>
                 )
               )}

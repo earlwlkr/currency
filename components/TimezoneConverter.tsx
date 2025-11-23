@@ -1,6 +1,7 @@
 'use client';
 
 import { useAtom } from 'jotai';
+import { Trash2 } from 'lucide-react';
 import type { DateTimeFormatOptions } from 'intl';
 
 import { timezoneListAtom } from '@/lib/timezoneAtoms';
@@ -26,18 +27,34 @@ const convertTimezone = (date: Date, targetTimeZone: string) => {
 export const TimezoneConverter = () => {
   const [timezoneList, setTimezoneList] = useAtom(timezoneListAtom);
 
+  const handleRemove = (timezoneToRemove: string) => {
+    setTimezoneList(timezoneList.filter((tz) => tz !== timezoneToRemove));
+  };
+
   return (
     <div className="flex flex-col gap-y-2">
       <Table>
         <TableBody>
           {timezoneList.map((timezone) => (
             <TableRow key={timezone}>
-              {/* import {formatTimezone} from '@/lib/timezoneUtils'; */}
-
-              {/* ... */}
-
-              <TableCell className="font-medium">{formatTimezone(timezone)}</TableCell>
+              <TableCell className="font-medium">
+                <div className="flex flex-col">
+                  <span className="font-bold">{formatTimezone(timezone).main}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {formatTimezone(timezone).sub}
+                  </span>
+                </div>
+              </TableCell>
               <TableCell>{convertTimezone(new Date(), timezone)}</TableCell>
+              <TableCell>
+                <button
+                  onClick={() => handleRemove(timezone)}
+                  className="text-muted-foreground hover:text-red-500 transition-colors"
+                  aria-label={`Remove ${timezone}`}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>

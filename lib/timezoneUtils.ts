@@ -15,8 +15,8 @@ export const TIMEZONE_ABBREVIATIONS: Record<string, string> = {
     HST: 'Pacific/Honolulu',
     AKST: 'America/Anchorage',
     AKDT: 'America/Anchorage',
-    GMT: 'Etc/GMT',
-    UTC: 'Etc/UTC',
+    // GMT: 'Etc/GMT',
+    // UTC: 'Etc/UTC',
     CET: 'Europe/Paris',
     CEST: 'Europe/Paris',
     EET: 'Europe/Athens',
@@ -57,7 +57,22 @@ export function searchTimezones(query: string): string[] {
     );
 }
 
-export function formatTimezone(timezone: string): string {
+const ABBR_OVERRIDES: Record<string, Record<string, string>> = {
+    'Australia/Sydney': { '+10:00': 'AEST', '+11:00': 'AEDT' },
+    'Australia/Melbourne': { '+10:00': 'AEST', '+11:00': 'AEDT' },
+    'Australia/Adelaide': { '+09:30': 'ACST', '+10:30': 'ACDT' },
+    'Australia/Perth': { '+08:00': 'AWST' },
+    'Asia/Tokyo': { '+09:00': 'JST' },
+    'Asia/Seoul': { '+09:00': 'KST' },
+    'Asia/Shanghai': { '+08:00': 'CST' },
+    // Add more as needed
+};
+
+export function formatTimezone(timezone: string): {
+    main: string;
+    sub: string;
+    alt: string;
+} {
     try {
         const date = new Date();
         const formatter = new Intl.DateTimeFormat('en-US', {
@@ -66,28 +81,54 @@ export function formatTimezone(timezone: string): string {
         });
         const parts = formatter.formatToParts(date);
         const offset = parts.find((part) => part.type === 'timeZoneName')?.value || '';
+        // Clean up offset: "GMT-05:00" -> "-05:00"
+        const cleanOffset = offset.replace('GMT', '');
 
         const abbrFormatter = new Intl.DateTimeFormat('en-US', {
             timeZone: timezone,
             timeZoneName: 'short',
         });
         const abbrParts = abbrFormatter.formatToParts(date);
-        const abbreviation = abbrParts.find((part) => part.type === 'timeZoneName')?.value || '';
+        let abbreviation = abbrParts.find((part) => part.type === 'timeZoneName')?.value || '';
+
+        // Check overrides
+        if (ABBR_OVERRIDES[timezone] && ABBR_OVERRIDES[timezone][cleanOffset]) {
+            abbreviation = ABBR_OVERRIDES[timezone][cleanOffset];
+        }
 
         // Handle Etc/GMT cases
         if (timezone.startsWith('Etc/')) {
-            return `${timezone.replace('Etc/', '')} (${offset})`;
+            const main = timezone.replace('Etc/', '');
+            const sub = offset;
+            return { main, sub, alt: `${main} (${sub})` };
         }
 
         // Handle Region/City cases
         const [region, city] = timezone.split('/');
         if (city) {
             const formattedCity = city.replace(/_/g, ' ');
-            return `${formattedCity} (${region}) ${abbreviation} (${offset})`;
+            const main = formattedCity;
+
+            // Deduplicate info
+            const parts = [region];
+            const isAbbrRedundant = (abbreviation === cleanOffset) || (abbreviation === offset && cleanOffset !== '');
+
+            if (abbreviation && !isAbbrRedundant) {
+                if (!abbreviation.startsWith('GMT') || cleanOffset === '') {
+                    parts.push(abbreviation);
+                }
+            }
+
+            if (cleanOffset) {
+                parts.push(cleanOffset);
+            }
+
+            const sub = parts.join(' • ');
+            return { main, sub, alt: `${main} (${sub})` };
         }
 
-        return `${timezone} ${abbreviation} (${offset})`;
+        return { main: timezone, sub: offset, alt: `${timezone} (${offset})` };
     } catch (e) {
-        return timezone;
+        return { main: timezone, sub: '', alt: timezone };
     }
 }
