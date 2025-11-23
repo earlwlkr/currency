@@ -7,6 +7,8 @@ import { timezoneListAtom } from '@/lib/timezoneAtoms';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import { TimezoneInput } from './TimezoneInput';
 
+import { formatTimezone } from '@/lib/timezoneUtils';
+
 const convertTimezone = (date: Date, targetTimeZone: string) => {
   // const targetTimeZone = 'America/New_York';
 
@@ -30,7 +32,11 @@ export const TimezoneConverter = () => {
         <TableBody>
           {timezoneList.map((timezone) => (
             <TableRow key={timezone}>
-              <TableCell className="font-medium">{timezone}</TableCell>
+              {/* import {formatTimezone} from '@/lib/timezoneUtils'; */}
+
+              {/* ... */}
+
+              <TableCell className="font-medium">{formatTimezone(timezone)}</TableCell>
               <TableCell>{convertTimezone(new Date(), timezone)}</TableCell>
             </TableRow>
           ))}

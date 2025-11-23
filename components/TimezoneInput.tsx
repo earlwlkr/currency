@@ -27,7 +27,7 @@ function stateReducer(
   }
 }
 
-import { searchTimezones } from '@/lib/timezoneUtils';
+import { searchTimezones, formatTimezone } from '@/lib/timezoneUtils';
 
 function getMatchingItems(inputValue: string) {
   return searchTimezones(inputValue);
@@ -109,7 +109,7 @@ export const TimezoneInput = () => {
                       item,
                     })}
                   >
-                    {item}
+                    {formatTimezone(item)}
                   </div>
                 )
               )}
