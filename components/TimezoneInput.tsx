@@ -27,20 +27,16 @@ function stateReducer(
   }
 }
 
-const allTimezones = Intl.supportedValuesOf('timeZone');
-function getMatchingItems(inputValue: string, items: typeof allTimezones) {
-  if (!inputValue) {
-    return items;
-  }
-  return items.filter((item) =>
-    item.toLowerCase().includes(inputValue.toLowerCase())
-  );
+import { searchTimezones } from '@/lib/timezoneUtils';
+
+function getMatchingItems(inputValue: string) {
+  return searchTimezones(inputValue);
 }
 
 export const TimezoneInput = () => {
   const [timezoneList, setTimezoneList] = useAtom(timezoneListAtom);
 
-  const timezoneOptions = useRef(allTimezones);
+
 
   return (
     <Downshift
@@ -81,8 +77,7 @@ export const TimezoneInput = () => {
                     if (['Enter', 'Tab'].includes(e.key) && !highlightedIndex) {
                       e.preventDefault();
                       const options = getMatchingItems(
-                        inputValue,
-                        timezoneOptions.current
+                        inputValue
                       );
                       if (options.length > 0) {
                         selectItemAtIndex(0);
@@ -100,7 +95,7 @@ export const TimezoneInput = () => {
               {...getMenuProps()}
               className="mt-2 h-40 rounded-md border"
             >
-              {getMatchingItems(inputValue, timezoneOptions.current).map(
+              {getMatchingItems(inputValue).map(
                 (item, index) => (
                   <div
                     key={item}
