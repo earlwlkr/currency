@@ -82,6 +82,9 @@ export function searchTimezones(query: string): SearchResult[] {
         cityMatches = [...cityMatches, ...extraMatches];
     }
 
+    // Sort by population descending
+    cityMatches.sort((a, b) => b.pop - a.pop);
+
     // Optimization: Loop until we hit the limit
     for (const city of cityMatches) {
         if (results.length >= MAX_RESULTS) break;
