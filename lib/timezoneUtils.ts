@@ -69,6 +69,9 @@ export function searchTimezones(query: string): SearchResult[] {
         addResult(id, fmt.main, normalizedQuery);
     }
 
+    // Limit results for performance (e.g., searching "a" returns thousands)
+    const MAX_RESULTS = 50;
+
     // 2. City Search (city-timezones)
     let cityMatches = cityTimezones.findFromCityStateProvince(query);
 
@@ -79,14 +82,17 @@ export function searchTimezones(query: string): SearchResult[] {
         cityMatches = [...cityMatches, ...extraMatches];
     }
 
-    cityMatches.forEach(city => {
+    // Optimization: Loop until we hit the limit
+    for (const city of cityMatches) {
+        if (results.length >= MAX_RESULTS) break;
+
         let id = city.timezone;
         try {
             // Resolve alias (e.g., Asia/Ho_Chi_Minh -> Asia/Saigon)
             id = new Intl.DateTimeFormat('en-US', { timeZone: id }).resolvedOptions().timeZone;
         } catch (e) {
             // Invalid timezone in data, skip
-            return;
+            continue;
         }
 
         if (allTimezones.includes(id)) {
@@ -95,33 +101,38 @@ export function searchTimezones(query: string): SearchResult[] {
             const fmt = formatTimezone(id);
             addResult(id, label, fmt.sub);
         }
-    });
+    }
 
     // 3. IANA Timezone Search (Fallback and complementary)
     const tzMatches = allTimezones.filter((tz) =>
         tz.toLowerCase().includes(query.toLowerCase())
     );
 
-    tzMatches.forEach(id => {
+    for (const id of tzMatches) {
+        if (results.length >= MAX_RESULTS) break;
+
         // If we already added this timezone via a city match, skip the generic one to avoid duplicates
         // e.g. "Paris, France" (Europe/Paris) is better than just "Europe/Paris"
         if (addedTimezoneIds.has(id)) {
-            return;
+            continue;
         }
 
         const fmt = formatTimezone(id);
         addResult(id, fmt.main, fmt.sub);
-    });
+    }
 
     // 4. Check for GMT/UTC offsets (e.g., GMT+7, UTC-5)
-    const offsetMatch = normalizedQuery.match(/^(?:GMT|UTC)([+-])(\d{1,2})$/);
-    if (offsetMatch) {
-        const sign = offsetMatch[1] === '+' ? '-' : '+'; // Etc/GMT offsets are inverted
-        const hours = parseInt(offsetMatch[2], 10);
-        const gmtZone = `Etc/GMT${sign}${hours}`;
-        if (allTimezones.includes(gmtZone)) {
-            const fmt = formatTimezone(gmtZone);
-            addResult(gmtZone, fmt.main, fmt.sub);
+    // Only check if we haven't filled up
+    if (results.length < MAX_RESULTS) {
+        const offsetMatch = normalizedQuery.match(/^(?:GMT|UTC)([+-])(\d{1,2})$/);
+        if (offsetMatch) {
+            const sign = offsetMatch[1] === '+' ? '-' : '+'; // Etc/GMT offsets are inverted
+            const hours = parseInt(offsetMatch[2], 10);
+            const gmtZone = `Etc/GMT${sign}${hours}`;
+            if (allTimezones.includes(gmtZone)) {
+                const fmt = formatTimezone(gmtZone);
+                addResult(gmtZone, fmt.main, fmt.sub);
+            }
         }
     }
 
