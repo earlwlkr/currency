@@ -145,11 +145,26 @@ export function searchTimezones(query: string): SearchResult[] {
 const ABBR_OVERRIDES: Record<string, Record<string, string>> = {
     'Australia/Sydney': { '+10:00': 'AEST', '+11:00': 'AEDT' },
     'Australia/Melbourne': { '+10:00': 'AEST', '+11:00': 'AEDT' },
+    'Australia/Brisbane': { '+10:00': 'AEST' },
     'Australia/Adelaide': { '+09:30': 'ACST', '+10:30': 'ACDT' },
     'Australia/Perth': { '+08:00': 'AWST' },
     'Asia/Tokyo': { '+09:00': 'JST' },
     'Asia/Seoul': { '+09:00': 'KST' },
     'Asia/Shanghai': { '+08:00': 'CST' },
+    'Asia/Hong_Kong': { '+08:00': 'HKT' },
+    'Asia/Singapore': { '+08:00': 'SGT' },
+    'Asia/Bangkok': { '+07:00': 'ICT' },
+    'Asia/Kolkata': { '+05:30': 'IST' },
+    'Asia/Dubai': { '+04:00': 'GST' },
+    'Europe/London': { '+00:00': 'GMT', '+01:00': 'BST' },
+    'Europe/Paris': { '+01:00': 'CET', '+02:00': 'CEST' },
+    'Europe/Berlin': { '+01:00': 'CET', '+02:00': 'CEST' },
+    'Europe/Zurich': { '+01:00': 'CET', '+02:00': 'CEST' },
+    'Europe/Rome': { '+01:00': 'CET', '+02:00': 'CEST' },
+    'Europe/Madrid': { '+01:00': 'CET', '+02:00': 'CEST' },
+    'Europe/Moscow': { '+03:00': 'MSK' },
+    'Pacific/Auckland': { '+12:00': 'NZST', '+13:00': 'NZDT' },
+    'America/Sao_Paulo': { '-03:00': 'BRT', '-02:00': 'BRST' },
     // Add more as needed
 };
 
