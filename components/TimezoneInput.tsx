@@ -27,7 +27,7 @@ function stateReducer(
   }
 }
 
-import { searchTimezones, formatTimezone } from '@/lib/timezoneUtils';
+import { searchTimezones } from '@/lib/timezoneUtils';
 
 function getMatchingItems(inputValue: string) {
   return searchTimezones(inputValue);
@@ -36,19 +36,17 @@ function getMatchingItems(inputValue: string) {
 export const TimezoneInput = () => {
   const [timezoneList, setTimezoneList] = useAtom(timezoneListAtom);
 
-
-
   return (
     <Downshift
       onChange={(selection) => {
         if (!selection) {
           return;
         }
-        if (!timezoneList.includes(selection)) {
-          setTimezoneList([...timezoneList, selection]);
+        if (!timezoneList.includes(selection.id)) {
+          setTimezoneList([...timezoneList, selection.id]);
         }
       }}
-      itemToString={(item) => (item ? item : '')}
+      itemToString={(item) => (item ? item.label : '')}
       stateReducer={stateReducer}
     >
       {({
@@ -70,7 +68,7 @@ export const TimezoneInput = () => {
           >
             <Input
               placeholder="Add another timezone..."
-              className="text-lg"
+              className="text-lg w-[300px]"
               {...getInputProps({
                 onKeyDown: (e) => {
                   if (inputValue) {
@@ -93,16 +91,16 @@ export const TimezoneInput = () => {
           {isOpen && inputValue ? (
             <ScrollArea
               {...getMenuProps()}
-              className="mt-2 h-40 rounded-md border"
+              className="mt-2 h-60 rounded-md border bg-popover text-popover-foreground shadow-md z-50 absolute w-[300px]"
             >
               {getMatchingItems(inputValue).map(
                 (item, index) => (
                   <div
-                    key={item}
+                    key={`${item.id}-${index}`}
                     className={cn(
-                      'p-2 mx-2 my-1 rounded-md',
-                      highlightedIndex === index ? 'bg-slate-700' : '',
-                      selectedItem === item ? 'bold' : ''
+                      'p-2 mx-2 my-1 rounded-md cursor-default',
+                      highlightedIndex === index ? 'bg-accent text-accent-foreground' : '',
+                      selectedItem === item ? 'font-bold' : ''
                     )}
                     {...getItemProps({
                       index,
@@ -110,9 +108,9 @@ export const TimezoneInput = () => {
                     })}
                   >
                     <div className="flex flex-col">
-                      <span className="font-bold">{formatTimezone(item).main}</span>
+                      <span className="font-medium text-sm">{item.label}</span>
                       <span className="text-xs text-muted-foreground">
-                        {formatTimezone(item).sub}
+                        {item.sub}
                       </span>
                     </div>
                   </div>

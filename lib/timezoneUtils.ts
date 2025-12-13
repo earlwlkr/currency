@@ -1,3 +1,5 @@
+import cityTimezones from 'city-timezones';
+
 export const TIMEZONE_ABBREVIATIONS: Record<string, string> = {
     AEST: 'Australia/Sydney',
     AEDT: 'Australia/Sydney',
@@ -30,31 +32,100 @@ export const TIMEZONE_ABBREVIATIONS: Record<string, string> = {
 
 const allTimezones = Intl.supportedValuesOf('timeZone');
 
-export function searchTimezones(query: string): string[] {
-    if (!query) return allTimezones;
+export interface SearchResult {
+    id: string;   // The IANA timezone ID (e.g., "America/New_York")
+    label: string; // The display label (e.g., "New York, United States")
+    sub: string;  // Additional info (e.g., "EST" or GMT offset)
+}
+
+export function searchTimezones(query: string): SearchResult[] {
+    if (!query) {
+        // Return default view or empty, maybe some popular ones?
+        // For now let's just return a slice of allTimezones to avoid massive list
+        return allTimezones.slice(0, 10).map(tz => ({
+            id: tz,
+            label: formatTimezone(tz).main,
+            sub: formatTimezone(tz).sub
+        }));
+    };
 
     const normalizedQuery = query.toUpperCase();
+    const results: SearchResult[] = [];
+    const usedIds = new Set<string>();   // Tracks unique ID+Label combinations (for UI)
+    const addedTimezoneIds = new Set<string>(); // Tracks timezone IDs to prevent redundant generic matches
+
+    const addResult = (id: string, label: string, sub: string) => {
+        if (!usedIds.has(id + label)) { // Composite key to allow same timezone with different labels
+            usedIds.add(id + label);
+            addedTimezoneIds.add(id);
+            results.push({ id, label, sub });
+        }
+    };
 
     // 1. Check for exact abbreviation match
     if (TIMEZONE_ABBREVIATIONS[normalizedQuery]) {
-        return [TIMEZONE_ABBREVIATIONS[normalizedQuery]];
+        const id = TIMEZONE_ABBREVIATIONS[normalizedQuery];
+        const fmt = formatTimezone(id);
+        addResult(id, fmt.main, normalizedQuery);
     }
 
-    // 2. Check for GMT/UTC offsets (e.g., GMT+7, UTC-5)
+    // 2. City Search (city-timezones)
+    let cityMatches = cityTimezones.findFromCityStateProvince(query);
+
+    // Also try searching with spaces removed (e.g. "Ha Noi" -> "HaNoi" -> matches "Hanoi")
+    const simplifiedQuery = query.replace(/\s+/g, '');
+    if (simplifiedQuery !== query && simplifiedQuery.length > 0) {
+        const extraMatches = cityTimezones.findFromCityStateProvince(simplifiedQuery);
+        cityMatches = [...cityMatches, ...extraMatches];
+    }
+
+    cityMatches.forEach(city => {
+        let id = city.timezone;
+        try {
+            // Resolve alias (e.g., Asia/Ho_Chi_Minh -> Asia/Saigon)
+            id = new Intl.DateTimeFormat('en-US', { timeZone: id }).resolvedOptions().timeZone;
+        } catch (e) {
+            // Invalid timezone in data, skip
+            return;
+        }
+
+        if (allTimezones.includes(id)) {
+            // e.g. "San Francisco, United States"
+            const label = `${city.city}, ${city.country}`;
+            const fmt = formatTimezone(id);
+            addResult(id, label, fmt.sub);
+        }
+    });
+
+    // 3. IANA Timezone Search (Fallback and complementary)
+    const tzMatches = allTimezones.filter((tz) =>
+        tz.toLowerCase().includes(query.toLowerCase())
+    );
+
+    tzMatches.forEach(id => {
+        // If we already added this timezone via a city match, skip the generic one to avoid duplicates
+        // e.g. "Paris, France" (Europe/Paris) is better than just "Europe/Paris"
+        if (addedTimezoneIds.has(id)) {
+            return;
+        }
+
+        const fmt = formatTimezone(id);
+        addResult(id, fmt.main, fmt.sub);
+    });
+
+    // 4. Check for GMT/UTC offsets (e.g., GMT+7, UTC-5)
     const offsetMatch = normalizedQuery.match(/^(?:GMT|UTC)([+-])(\d{1,2})$/);
     if (offsetMatch) {
         const sign = offsetMatch[1] === '+' ? '-' : '+'; // Etc/GMT offsets are inverted
         const hours = parseInt(offsetMatch[2], 10);
         const gmtZone = `Etc/GMT${sign}${hours}`;
         if (allTimezones.includes(gmtZone)) {
-            return [gmtZone];
+            const fmt = formatTimezone(gmtZone);
+            addResult(gmtZone, fmt.main, fmt.sub);
         }
     }
 
-    // 3. Filter IANA timezones
-    return allTimezones.filter((tz) =>
-        tz.toLowerCase().includes(query.toLowerCase())
-    );
+    return results;
 }
 
 const ABBR_OVERRIDES: Record<string, Record<string, string>> = {
