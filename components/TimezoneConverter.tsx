@@ -1,9 +1,15 @@
 'use client';
 
 import { useAtom } from 'jotai';
-import { Trash2 } from 'lucide-react';
+import { MoreVertical, Trash2 } from 'lucide-react';
 import type { DateTimeFormatOptions } from 'intl';
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { timezoneListAtom } from '@/lib/timezoneAtoms';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import { TimezoneInput } from './TimezoneInput';
@@ -47,13 +53,26 @@ export const TimezoneConverter = () => {
               </TableCell>
               <TableCell>{convertTimezone(new Date(), timezone)}</TableCell>
               <TableCell>
-                <button
-                  onClick={() => handleRemove(timezone)}
-                  className="text-muted-foreground hover:text-red-500 transition-colors"
-                  aria-label={`Remove ${timezone}`}
-                >
-                  <Trash2 size={16} />
-                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="rounded-sm p-1 text-muted-foreground transition-colors hover:text-foreground"
+                      aria-label={`Open ${timezone} actions`}
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => handleRemove(timezone)}
+                      className="text-red-600 focus:text-red-600"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </TableCell>
             </TableRow>
           ))}

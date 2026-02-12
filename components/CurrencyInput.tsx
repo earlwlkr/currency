@@ -1,6 +1,7 @@
 'use client';
 
 import Downshift, { DownshiftState, StateChangeOptions } from 'downshift';
+import { X } from 'lucide-react';
 
 import countryByCurrencyCode from '@/config/country-by-currency-code.json';
 import { Input } from '@/components/ui/input';
@@ -70,33 +71,46 @@ const CurrencyInput = () => {
         highlightedIndex,
         selectedItem,
         selectItemAtIndex,
+        setInputValue,
       }) => (
         <div>
           <div
             className="inline-block mt-4"
             {...getRootProps({}, { suppressRefError: true })}
           >
-            <Input
-              placeholder="Add another currency..."
-              className="text-lg"
-              {...getInputProps({
-                onKeyDown: (e) => {
-                  if (inputValue) {
-                    if (['Enter', 'Tab'].includes(e.key) && !highlightedIndex) {
-                      e.preventDefault();
-                      const options = getMatchingItems(
-                        inputValue,
-                        currencies.current
-                      );
-                      if (options.length > 0) {
-                        selectItemAtIndex(0);
-                        clearSelection();
+            <div className="relative">
+              <Input
+                placeholder="Add another currency..."
+                className="text-lg pr-10"
+                {...getInputProps({
+                  onKeyDown: (e) => {
+                    if (inputValue) {
+                      if (['Enter', 'Tab'].includes(e.key) && !highlightedIndex) {
+                        e.preventDefault();
+                        const options = getMatchingItems(
+                          inputValue,
+                          currencies.current
+                        );
+                        if (options.length > 0) {
+                          selectItemAtIndex(0);
+                          clearSelection();
+                        }
                       }
                     }
-                  }
-                },
-              })}
-            />
+                  },
+                })}
+              />
+              {inputValue ? (
+                <button
+                  type="button"
+                  onClick={() => setInputValue('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-muted-foreground transition-colors hover:text-foreground"
+                  aria-label="Clear currency input"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              ) : null}
+            </div>
           </div>
 
           {isOpen && inputValue ? (
