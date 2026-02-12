@@ -4,7 +4,7 @@ import { atomWithAsyncStorage } from '@/lib/asyncStorage';
 
 export const baseAccordionAtom = atomWithAsyncStorage(
   'baseAccordion',
-  'currency'
+  ['currency'] as string[] | string
 );
 
 export const store = createStore();

@@ -12,17 +12,32 @@ import {
 import { baseAccordionAtom } from '@/lib/atoms';
 import { CurrencyProvider } from '@/lib/CurrencyContext';
 import { useAtom } from 'jotai';
+import { useEffect, useMemo } from 'react';
 
 export default function Home() {
   const [baseAccordion, setBaseAccordion] = useAtom(baseAccordionAtom);
+  const normalizedBaseAccordion = useMemo(
+    () =>
+      Array.isArray(baseAccordion)
+        ? baseAccordion
+        : baseAccordion
+          ? [baseAccordion]
+          : [],
+    [baseAccordion]
+  );
+
+  useEffect(() => {
+    if (!Array.isArray(baseAccordion)) {
+      setBaseAccordion(normalizedBaseAccordion);
+    }
+  }, [baseAccordion, normalizedBaseAccordion, setBaseAccordion]);
 
   return (
     <main className="flex min-h-screen flex-col items-center pt-4">
       <div className="w-full px-4 sm:w-1/2">
         <Accordion
-          type="single"
-          collapsible
-          defaultValue={baseAccordion}
+          type="multiple"
+          value={normalizedBaseAccordion}
           onValueChange={(value) => {
             setBaseAccordion(value);
           }}
