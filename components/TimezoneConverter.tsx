@@ -45,13 +45,13 @@ export const TimezoneConverter = () => {
             <TableRow key={timezone}>
               <TableCell className="font-medium">
                 <div className="flex flex-col">
-                  <span className="font-bold">{formatTimezone(timezone).main}</span>
+                  <span className="text-lg">{formatTimezone(timezone).main}</span>
                   <span className="text-xs text-muted-foreground">
                     {formatTimezone(timezone).sub}
                   </span>
                 </div>
               </TableCell>
-              <TableCell>{convertTimezone(new Date(), timezone)}</TableCell>
+              <TableCell className="text-lg">{convertTimezone(new Date(), timezone)}</TableCell>
               <TableCell>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

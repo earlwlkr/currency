@@ -120,7 +120,7 @@ export const TimezoneInput = () => {
                   })}
                 >
                   <div className="flex flex-col">
-                    <span className="font-medium text-sm">{item.label}</span>
+                    <span className="font-medium text-lg">{item.label}</span>
                     <span className="text-xs text-muted-foreground">
                       {item.sub}
                     </span>
