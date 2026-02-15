@@ -60,7 +60,7 @@ export const TimezoneInput = () => {
         highlightedIndex,
         selectedItem,
         selectItemAtIndex,
-        setInputValue,
+        setState,
       }) => (
         <div>
           <div
@@ -89,7 +89,7 @@ export const TimezoneInput = () => {
               {inputValue ? (
                 <button
                   type="button"
-                  onClick={() => setInputValue('')}
+                  onClick={() => setState({ inputValue: '' })}
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-muted-foreground transition-colors hover:text-foreground"
                   aria-label="Clear timezone input"
                 >
