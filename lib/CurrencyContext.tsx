@@ -7,6 +7,7 @@ import React, {
   useCallback,
 } from 'react';
 import { get as getIdb, set } from 'idb-keyval';
+import { getUrlParams, clearUrlParams } from '@/lib/urlParams';
 
 // Half a day in milliseconds
 const HALF_DAY = 12 * 60 * 60 * 1000;
@@ -52,21 +53,28 @@ export const fetchCurrencyRates = async () => {
 const formatter = Intl.NumberFormat('en-US');
 
 export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
-  const [baseValue, setBaseValue] = useState<number>(() =>
-    typeof window !== 'undefined' && localStorage.getItem('baseValue')
+  const urlParams = getUrlParams();
+
+  const [baseValue, setBaseValue] = useState<number>(() => {
+    if (urlParams?.value !== undefined) return urlParams.value;
+    return typeof window !== 'undefined' && localStorage.getItem('baseValue')
       ? Number(localStorage.getItem('baseValue'))
-      : 100
-  );
+      : 100;
+  });
+
   const [baseCurrency, setBaseCurrency] = useState<string>(
     () =>
       (typeof window !== 'undefined' && localStorage.getItem('baseCurrency')) ||
       'USD'
   );
+
   const [currenciesList, setCurrenciesList] = useState<string[]>(() => {
+    if (urlParams?.currencies) return urlParams.currencies;
     const storedList =
       typeof window !== 'undefined' && localStorage.getItem('currenciesList');
     return storedList ? JSON.parse(storedList) : ['USD', 'VND'];
   });
+
   const [currenciesRates, setCurrenciesRates] = useState<{
     usd: Record<string, number>;
   }>({ usd: {} });
@@ -112,6 +120,14 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     localStorage.setItem('currenciesList', JSON.stringify(currenciesList));
   }, [currenciesList]);
+
+  // Clear URL params after reading them to keep the URL clean
+  useEffect(() => {
+    if (urlParams) {
+      clearUrlParams();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <CurrencyContext.Provider

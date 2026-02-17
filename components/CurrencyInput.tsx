@@ -75,7 +75,7 @@ const CurrencyInput = () => {
       }) => (
         <div className="relative">
           <div
-            className="mt-4"
+            className="mt-3"
             {...getRootProps({}, { suppressRefError: true })}
           >
             <div className="relative">
@@ -124,7 +124,7 @@ const CurrencyInput = () => {
                   <div
                     key={item.country + item.currency_code}
                     className={cn(
-                      'px-3 py-2 mx-1 my-0.5 rounded-md cursor-default',
+                      'px-2.5 py-1.5 mx-1 my-0.5 rounded-md cursor-default',
                       highlightedIndex === index ? 'bg-accent text-accent-foreground' : '',
                       selectedItem === item ? 'font-bold' : ''
                     )}
@@ -133,7 +133,7 @@ const CurrencyInput = () => {
                       item,
                     })}
                   >
-                    <span className="font-mono font-medium text-sm">{item.currency_code}</span>
+                    <span className="font-medium text-sm">{item.currency_code}</span>
                     <span className="text-muted-foreground text-sm ml-2">{item.country}</span>
                   </div>
                 )

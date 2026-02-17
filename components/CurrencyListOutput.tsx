@@ -87,7 +87,7 @@ const CurrencyListOutput = () => {
   };
 
   return (
-    <div className="flex flex-col gap-y-3">
+    <div className="flex flex-col gap-y-2">
       {/* Preset Buttons */}
       <div className="flex gap-1.5 flex-wrap">
         {PRESETS.map((amount) => (
@@ -105,9 +105,9 @@ const CurrencyListOutput = () => {
       {currenciesList.map((currency) => (
         <div
           key={currency}
-          className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2"
+          className="flex items-center gap-2 rounded-lg bg-muted/50 px-2.5 py-1.5"
         >
-          <span className="text-sm font-semibold tracking-wide font-mono w-12 shrink-0">
+          <span className="text-sm font-semibold tracking-wide w-12 shrink-0">
             {currency}
           </span>
           <div className="relative flex-1">

@@ -1,6 +1,7 @@
 'use client';
 
 import { useAtom } from 'jotai';
+import { useEffect } from 'react';
 import { MoreVertical, Trash2 } from 'lucide-react';
 import type { DateTimeFormatOptions } from 'intl';
 
@@ -12,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { timezoneListAtom } from '@/lib/timezoneAtoms';
 import { TimezoneInput } from './TimezoneInput';
+import { getUrlParams } from '@/lib/urlParams';
 
 import { formatTimezone } from '@/lib/timezoneUtils';
 
@@ -30,16 +32,24 @@ const convertTimezone = (date: Date, targetTimeZone: string) => {
 export const TimezoneConverter = () => {
   const [timezoneList, setTimezoneList] = useAtom(timezoneListAtom);
 
+  // Read timezones from URL params on mount
+  useEffect(() => {
+    const params = getUrlParams();
+    if (params?.timezones && params.timezones.length > 0) {
+      setTimezoneList(params.timezones);
+    }
+  }, [setTimezoneList]);
+
   const handleRemove = (timezoneToRemove: string) => {
     setTimezoneList(timezoneList.filter((tz) => tz !== timezoneToRemove));
   };
 
   return (
-    <div className="flex flex-col gap-y-2">
+    <div className="flex flex-col gap-y-1.5">
       {timezoneList.map((timezone) => (
         <div
           key={timezone}
-          className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2"
+          className="flex items-center justify-between rounded-lg bg-muted/50 px-2.5 py-1.5"
         >
           <div className="flex flex-col min-w-0 flex-1">
             <span className="text-sm font-medium">
