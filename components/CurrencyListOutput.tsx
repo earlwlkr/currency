@@ -90,7 +90,7 @@ const CurrencyListOutput = () => {
   return (
     <div className="flex flex-col gap-y-2">
       {/* Preset Buttons */}
-      <div className="flex gap-1.5 flex-wrap">
+      <div className="flex gap-1.5 flex-wrap items-center">
         {PRESETS.map((amount) => (
           <button
             key={amount}
@@ -101,6 +101,11 @@ const CurrencyListOutput = () => {
             {amount.toLocaleString()}
           </button>
         ))}
+        {lastFetchTime && (
+          <span className="ml-auto px-2.5 py-1 text-xs font-medium rounded-md bg-muted text-muted-foreground">
+            Updated {new Date(lastFetchTime).toLocaleDateString()}
+          </span>
+        )}
       </div>
 
       {currenciesList.map((currency) => (
@@ -192,13 +197,7 @@ const CurrencyListOutput = () => {
         </div>
       ))}
 
-      {lastFetchTime && (
-        <div className="flex justify-end">
-          <span className="px-2.5 py-1 text-xs font-medium rounded-md bg-muted text-muted-foreground">
-            Updated {new Date(lastFetchTime).toLocaleDateString()}
-          </span>
-        </div>
-      )}
+
     </div>
   );
 };
