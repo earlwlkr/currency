@@ -24,6 +24,7 @@ const CurrencyListOutput = () => {
     currenciesList,
     setCurrenciesList,
     convertCurrency,
+    lastFetchTime,
   } = useCurrencyContext();
 
   // Track input values separately to allow typing expressions
@@ -190,6 +191,12 @@ const CurrencyListOutput = () => {
           </DropdownMenu>
         </div>
       ))}
+
+      {lastFetchTime && (
+        <p className="text-xs text-muted-foreground mt-2 text-right">
+          Rates last updated: {new Date(lastFetchTime).toLocaleString()}
+        </p>
+      )}
     </div>
   );
 };

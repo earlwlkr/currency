@@ -20,6 +20,7 @@ type CurrencyContextType = {
   currenciesList: string[];
   setCurrenciesList: (list: string[]) => void;
   convertCurrency: (amount: number, toCurrency: string) => string;
+  lastFetchTime: number | null;
 };
 
 const CurrencyContext = createContext<CurrencyContextType | undefined>(
@@ -28,26 +29,26 @@ const CurrencyContext = createContext<CurrencyContextType | undefined>(
 
 export const fetchCurrencyRates = async () => {
   if (typeof indexedDB === 'undefined') {
-    return {};
+    return { rates: {}, lastFetchTime: null };
   }
   const lastFetchCurrencyRates =
-    Number(localStorage.getItem('lastFetchCurrencyRates')) || 0;
-  console.log(
-    'last fetch currency rates:',
-    new Date(lastFetchCurrencyRates).toLocaleString()
-  );
+    (await getIdb<number>('lastFetchCurrencyRates')) || 0;
   if (Date.now() - lastFetchCurrencyRates < HALF_DAY) {
     const storageData = await getIdb<string>('currencyRates');
-    return JSON.parse(storageData || '{}');
+    return {
+      rates: JSON.parse(storageData || '{}'),
+      lastFetchTime: lastFetchCurrencyRates,
+    };
   }
   // Fetch new currency rates
   const response = await fetch(
     'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json'
   );
   const currencyRates = await response.json();
-  set('lastFetchCurrencyRates', Date.now());
-  set('currencyRates', JSON.stringify(currencyRates));
-  return currencyRates;
+  const now = Date.now();
+  await set('lastFetchCurrencyRates', now);
+  await set('currencyRates', JSON.stringify(currencyRates));
+  return { rates: currencyRates, lastFetchTime: now };
 };
 
 const formatter = Intl.NumberFormat('en-US');
@@ -79,6 +80,8 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
     usd: Record<string, number>;
   }>({ usd: {} });
 
+  const [lastFetchTime, setLastFetchTime] = useState<number | null>(null);
+
   const convertCurrency = useCallback(
     (amount: number, toCurrency: string) => {
       if (baseCurrency === toCurrency) {
@@ -101,9 +104,10 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const rates = await fetchCurrencyRates();
-      if (rates) {
-        setCurrenciesRates(rates);
+      const result = await fetchCurrencyRates();
+      if (result) {
+        setCurrenciesRates(result.rates);
+        setLastFetchTime(result.lastFetchTime);
       }
     };
     fetchData();
@@ -139,6 +143,7 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
         currenciesList,
         setCurrenciesList,
         convertCurrency,
+        lastFetchTime,
       }}
     >
       {children}
