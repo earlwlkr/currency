@@ -193,9 +193,11 @@ const CurrencyListOutput = () => {
       ))}
 
       {lastFetchTime && (
-        <p className="text-xs text-muted-foreground mt-2 text-right">
-          Rates last updated: {new Date(lastFetchTime).toLocaleString()}
-        </p>
+        <div className="flex justify-end">
+          <span className="px-2.5 py-1 text-xs font-medium rounded-md bg-muted text-muted-foreground">
+            Updated {new Date(lastFetchTime).toLocaleDateString()}
+          </span>
+        </div>
       )}
     </div>
   );
