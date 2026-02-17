@@ -2,7 +2,7 @@
 
 import Downshift, { DownshiftState, StateChangeOptions } from 'downshift';
 import { useAtom } from 'jotai';
-import { X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -62,15 +62,16 @@ export const TimezoneInput = () => {
         selectItemAtIndex,
         setState,
       }) => (
-        <div>
+        <div className="relative">
           <div
-            className="inline-block mt-4"
+            className="mt-4"
             {...getRootProps({}, { suppressRefError: true })}
           >
-            <div className="relative w-[300px]">
+            <div className="relative">
+              <Plus className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
                 placeholder="Add another timezone..."
-                className="text-lg w-[300px] pr-10"
+                className="text-lg pl-9 pr-10"
                 {...getInputProps({
                   onKeyDown: (e) => {
                     if (inputValue) {
@@ -90,7 +91,7 @@ export const TimezoneInput = () => {
                 <button
                   type="button"
                   onClick={() => setState({ inputValue: '' })}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-muted-foreground transition-colors hover:text-foreground"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                   aria-label="Clear timezone input"
                 >
                   <X className="h-4 w-4" />
@@ -102,13 +103,13 @@ export const TimezoneInput = () => {
           {isOpen && inputValue ? (
             <ScrollArea
               {...getMenuProps()}
-              className="mt-2 h-60 rounded-md border bg-popover text-popover-foreground shadow-md z-50 absolute w-[300px]"
+              className="mt-2 h-60 rounded-lg border bg-popover text-popover-foreground shadow-lg z-50 absolute w-full"
             >
               {getMatchingItems(inputValue).map((item, index) => (
                 <div
                   key={`${item.id}-${index}`}
                   className={cn(
-                    'p-2 mx-2 my-1 rounded-md cursor-default',
+                    'px-3 py-2 mx-1 my-0.5 rounded-md cursor-default',
                     highlightedIndex === index
                       ? 'bg-accent text-accent-foreground'
                       : '',
@@ -120,7 +121,7 @@ export const TimezoneInput = () => {
                   })}
                 >
                   <div className="flex flex-col">
-                    <span className="font-medium text-lg">{item.label}</span>
+                    <span className="font-medium text-sm">{item.label}</span>
                     <span className="text-xs text-muted-foreground">
                       {item.sub}
                     </span>

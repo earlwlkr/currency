@@ -1,7 +1,7 @@
 'use client';
 
 import Downshift, { DownshiftState, StateChangeOptions } from 'downshift';
-import { X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 
 import countryByCurrencyCode from '@/config/country-by-currency-code.json';
 import { Input } from '@/components/ui/input';
@@ -73,15 +73,16 @@ const CurrencyInput = () => {
         selectItemAtIndex,
         setState,
       }) => (
-        <div>
+        <div className="relative">
           <div
-            className="inline-block mt-4"
+            className="mt-4"
             {...getRootProps({}, { suppressRefError: true })}
           >
             <div className="relative">
+              <Plus className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
                 placeholder="Add another currency..."
-                className="text-lg pr-10"
+                className="text-lg pl-9 pr-10"
                 {...getInputProps({
                   onKeyDown: (e) => {
                     if (inputValue) {
@@ -104,7 +105,7 @@ const CurrencyInput = () => {
                 <button
                   type="button"
                   onClick={() => setState({ inputValue: '' })}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-muted-foreground transition-colors hover:text-foreground"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                   aria-label="Clear currency input"
                 >
                   <X className="h-4 w-4" />
@@ -116,23 +117,24 @@ const CurrencyInput = () => {
           {isOpen && inputValue ? (
             <ScrollArea
               {...getMenuProps()}
-              className="mt-2 h-40 rounded-md border"
+              className="mt-2 h-40 rounded-lg border bg-popover text-popover-foreground shadow-lg z-50 absolute w-full"
             >
               {getMatchingItems(inputValue, currencies.current).map(
                 (item, index) => (
                   <div
                     key={item.country + item.currency_code}
                     className={cn(
-                      'p-2 mx-2 my-1 rounded-md',
-                      highlightedIndex === index ? 'bg-slate-700' : '',
-                      selectedItem === item ? 'bold' : ''
+                      'px-3 py-2 mx-1 my-0.5 rounded-md cursor-default',
+                      highlightedIndex === index ? 'bg-accent text-accent-foreground' : '',
+                      selectedItem === item ? 'font-bold' : ''
                     )}
                     {...getItemProps({
                       index,
                       item,
                     })}
                   >
-                    {item.country} - {item.currency_code}
+                    <span className="font-mono font-medium text-sm">{item.currency_code}</span>
+                    <span className="text-muted-foreground text-sm ml-2">{item.country}</span>
                   </div>
                 )
               )}
