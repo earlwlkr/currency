@@ -31,24 +31,45 @@ export const fetchCurrencyRates = async () => {
   if (typeof indexedDB === 'undefined') {
     return { rates: {}, lastFetchTime: null };
   }
-  const lastFetchCurrencyRates =
-    (await getIdb<number>('lastFetchCurrencyRates')) || 0;
-  if (Date.now() - lastFetchCurrencyRates < HALF_DAY) {
-    const storageData = await getIdb<string>('currencyRates');
+  const lastFetchCurrencyRates = (await getIdb<number>('lastFetchCurrencyRates')) || 0;
+  const storageData = await getIdb<string>('currencyRates');
+  let cachedRates: { usd?: Record<string, number> } = {};
+  try {
+    cachedRates = JSON.parse(storageData || '{}');
+  } catch {
+    cachedRates = {};
+  }
+
+  if (Date.now() - lastFetchCurrencyRates < HALF_DAY && Object.keys(cachedRates).length > 0) {
     return {
-      rates: JSON.parse(storageData || '{}'),
+      rates: cachedRates,
       lastFetchTime: lastFetchCurrencyRates,
     };
   }
-  // Fetch new currency rates
-  const response = await fetch(
-    'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json'
-  );
-  const currencyRates = await response.json();
-  const now = Date.now();
-  await set('lastFetchCurrencyRates', now);
-  await set('currencyRates', JSON.stringify(currencyRates));
-  return { rates: currencyRates, lastFetchTime: now };
+
+  try {
+    // Fetch fresh rates when cache is stale.
+    const response = await fetch(
+      'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json'
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to fetch rates: ${response.status}`);
+    }
+    const currencyRates = await response.json();
+    if (!currencyRates || typeof currencyRates !== 'object' || !('usd' in currencyRates)) {
+      throw new Error('Invalid rates payload');
+    }
+    const now = Date.now();
+    await set('lastFetchCurrencyRates', now);
+    await set('currencyRates', JSON.stringify(currencyRates));
+    return { rates: currencyRates, lastFetchTime: now };
+  } catch {
+    // Keep the app usable offline/when API is unavailable.
+    return {
+      rates: cachedRates,
+      lastFetchTime: lastFetchCurrencyRates || null,
+    };
+  }
 };
 
 const formatter = Intl.NumberFormat('en-US');
