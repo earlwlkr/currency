@@ -18,15 +18,17 @@ import { getUrlParams } from '@/lib/urlParams';
 import { formatTimezone } from '@/lib/timezoneUtils';
 
 const convertTimezone = (date: Date, targetTimeZone: string) => {
-  const options: DateTimeFormatOptions = {
-    timeZone: targetTimeZone,
-    hour: '2-digit',
-    minute: '2-digit',
-  };
-  const formatter = new Intl.DateTimeFormat('en-US', options);
-  const formattedDate = formatter.format(date);
-
-  return formattedDate;
+  try {
+    const options: DateTimeFormatOptions = {
+      timeZone: targetTimeZone,
+      hour: '2-digit',
+      minute: '2-digit',
+    };
+    const formatter = new Intl.DateTimeFormat('en-US', options);
+    return formatter.format(date);
+  } catch {
+    return '--:--';
+  }
 };
 
 export const TimezoneConverter = () => {

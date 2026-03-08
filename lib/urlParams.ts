@@ -6,19 +6,58 @@ export interface ShareableState {
   timezones?: string[];
 }
 
+const CURRENCY_CODE_REGEX = /^[A-Z]{3}$/;
+
+const sanitizeValue = (value: string | null): number | undefined => {
+  if (!value) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const sanitizeCurrencies = (currencies: string | null): string[] | undefined => {
+  if (!currencies) return undefined;
+  const unique = new Set(
+    currencies
+      .split(',')
+      .map((currency) => currency.trim().toUpperCase())
+      .filter((currency) => CURRENCY_CODE_REGEX.test(currency))
+  );
+  return unique.size > 0 ? Array.from(unique) : undefined;
+};
+
+const isValidTimezone = (timezone: string): boolean => {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: timezone });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const sanitizeTimezones = (timezones: string | null): string[] | undefined => {
+  if (!timezones) return undefined;
+  const unique = new Set(
+    timezones
+      .split(',')
+      .map((timezone) => timezone.trim())
+      .filter((timezone) => timezone.length > 0 && isValidTimezone(timezone))
+  );
+  return unique.size > 0 ? Array.from(unique) : undefined;
+};
+
 export const getUrlParams = (): ShareableState | null => {
   if (typeof window === 'undefined') return null;
   const params = new URLSearchParams(window.location.search);
-  const value = params.get('v');
-  const currencies = params.get('c');
-  const timezones = params.get('t');
+  const value = sanitizeValue(params.get('v'));
+  const currencies = sanitizeCurrencies(params.get('c'));
+  const timezones = sanitizeTimezones(params.get('t'));
 
-  if (!value && !currencies && !timezones) return null;
+  if (value === undefined && !currencies && !timezones) return null;
 
   return {
-    value: value ? Number(value) : undefined,
-    currencies: currencies ? currencies.split(',') : undefined,
-    timezones: timezones ? timezones.split(',') : undefined,
+    value,
+    currencies,
+    timezones,
   };
 };
 
