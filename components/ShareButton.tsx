@@ -11,7 +11,11 @@ import { generateShareableUrl } from '@/lib/urlParams';
 export function ShareButton() {
   const { baseValue, currenciesList } = useCurrencyContext();
   const [timezoneList] = useAtom(timezoneListAtom);
-  const [copied, setCopied] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
+
+  const resetStatus = () => {
+    setTimeout(() => setStatus('idle'), 2000);
+  };
 
   const handleShare = async () => {
     const url = generateShareableUrl({
@@ -22,18 +26,18 @@ export function ShareButton() {
 
     try {
       await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setStatus('copied');
+      resetStatus();
     } catch {
       // Fallback: select and copy manually if clipboard API fails
       const textArea = document.createElement('textarea');
       textArea.value = url;
       document.body.appendChild(textArea);
       textArea.select();
-      document.execCommand('copy');
+      const copied = document.execCommand('copy');
       document.body.removeChild(textArea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setStatus(copied ? 'copied' : 'failed');
+      resetStatus();
     }
   };
 
@@ -43,11 +47,17 @@ export function ShareButton() {
       onClick={handleShare}
       className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
       title="Copy shareable link"
+      aria-live="polite"
     >
-      {copied ? (
+      {status === 'copied' ? (
         <>
           <Check className="h-3.5 w-3.5" />
           Copied!
+        </>
+      ) : status === 'failed' ? (
+        <>
+          <Link2 className="h-3.5 w-3.5" />
+          Copy failed
         </>
       ) : (
         <>
