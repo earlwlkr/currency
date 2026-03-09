@@ -11,6 +11,7 @@ import { getUrlParams, clearUrlParams } from '@/lib/urlParams';
 
 // Half a day in milliseconds
 const HALF_DAY = 12 * 60 * 60 * 1000;
+const CURRENCY_CODE_REGEX = /^[A-Z]{3}$/;
 
 type CurrencyContextType = {
   baseValue: number;
@@ -74,27 +75,77 @@ export const fetchCurrencyRates = async () => {
 
 const formatter = Intl.NumberFormat('en-US');
 
+const getStoredBaseValue = (): number => {
+  if (typeof window === 'undefined') {
+    return 100;
+  }
+  const storedValue = localStorage.getItem('baseValue');
+  if (!storedValue) {
+    return 100;
+  }
+  const parsedValue = Number(storedValue);
+  return Number.isFinite(parsedValue) ? parsedValue : 100;
+};
+
+const getStoredBaseCurrency = (): string => {
+  if (typeof window === 'undefined') {
+    return 'USD';
+  }
+  const storedBaseCurrency = localStorage.getItem('baseCurrency');
+  if (!storedBaseCurrency) {
+    return 'USD';
+  }
+  const normalized = storedBaseCurrency.trim().toUpperCase();
+  return CURRENCY_CODE_REGEX.test(normalized) ? normalized : 'USD';
+};
+
+const getStoredCurrenciesList = (): string[] => {
+  if (typeof window === 'undefined') {
+    return ['USD', 'VND'];
+  }
+  const storedList = localStorage.getItem('currenciesList');
+  if (!storedList) {
+    return ['USD', 'VND'];
+  }
+
+  try {
+    const parsedList = JSON.parse(storedList);
+    if (!Array.isArray(parsedList)) {
+      return ['USD', 'VND'];
+    }
+    const normalizedList = Array.from(
+      new Set(
+        parsedList
+          .filter((value): value is string => typeof value === 'string')
+          .map((value) => value.trim().toUpperCase())
+          .filter((value) => CURRENCY_CODE_REGEX.test(value))
+      )
+    );
+    return normalizedList.length > 0 ? normalizedList : ['USD', 'VND'];
+  } catch {
+    return ['USD', 'VND'];
+  }
+};
+
 export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
   const urlParams = getUrlParams();
 
   const [baseValue, setBaseValue] = useState<number>(() => {
-    if (urlParams?.value !== undefined) return urlParams.value;
-    return typeof window !== 'undefined' && localStorage.getItem('baseValue')
-      ? Number(localStorage.getItem('baseValue'))
-      : 100;
+    if (urlParams?.value !== undefined) {
+      return urlParams.value;
+    }
+    return getStoredBaseValue();
   });
 
   const [baseCurrency, setBaseCurrency] = useState<string>(
-    () =>
-      (typeof window !== 'undefined' && localStorage.getItem('baseCurrency')) ||
-      'USD'
+    () => getStoredBaseCurrency()
   );
 
   const [currenciesList, setCurrenciesList] = useState<string[]>(() => {
-    if (urlParams?.currencies) return urlParams.currencies;
-    const storedList =
-      typeof window !== 'undefined' && localStorage.getItem('currenciesList');
-    return storedList ? JSON.parse(storedList) : ['USD', 'VND'];
+    if (urlParams?.currencies && urlParams.currencies.length > 0) {
+      return urlParams.currencies;
+    }
+    return getStoredCurrenciesList();
   });
 
   const [currenciesRates, setCurrenciesRates] = useState<{
