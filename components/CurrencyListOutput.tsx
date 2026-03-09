@@ -82,7 +82,7 @@ const CurrencyListOutput = () => {
     // Update all input values to reflect the new base value
     const newInputValues: Record<string, string> = {};
     currenciesList.forEach((currency) => {
-      newInputValues[currency] = String(amount);
+      newInputValues[currency] = convertCurrency(amount, currency);
     });
     setInputValues(newInputValues);
   };

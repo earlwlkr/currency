@@ -112,10 +112,19 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
         return '';
       }
 
-      const usdAmount = amount * currenciesRates.usd[toCurrency.toLowerCase()];
+      const targetRate = currenciesRates.usd[toCurrency.toLowerCase()];
+      if (!targetRate || !Number.isFinite(targetRate)) {
+        return '';
+      }
+
+      const usdAmount = amount * targetRate;
       if (baseCurrency !== 'USD') {
+        const baseRate = currenciesRates.usd[baseCurrency.toLowerCase()];
+        if (!baseRate || !Number.isFinite(baseRate)) {
+          return '';
+        }
         return formatter.format(
-          usdAmount / currenciesRates.usd[baseCurrency.toLowerCase()]
+          usdAmount / baseRate
         );
       }
       return formatter.format(usdAmount);
