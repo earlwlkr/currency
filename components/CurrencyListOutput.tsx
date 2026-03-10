@@ -12,6 +12,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useCurrencyContext } from '@/lib/CurrencyContext';
 import { calculate } from '@/lib/calculator';
+import { HistoricalRateSparkline } from '@/components/HistoricalRateSparkline';
 
 const CurrencyListOutput = () => {
   const {
@@ -90,51 +91,54 @@ const CurrencyListOutput = () => {
           key={currency}
           className="flex items-center gap-2 rounded-lg bg-muted/50 px-2.5 py-1.5"
         >
-          <span className="text-sm font-semibold tracking-wide w-12 shrink-0">
+          <span className="text-sm font-semibold tracking-wide w-12 shrink-0 self-start pt-3">
             {currency}
           </span>
-          <div className="relative flex-1">
-            <Input
-              ref={(el) => {
-                inputRefs.current[currency] = el;
-              }}
-              id={currency}
-              className="text-lg pr-10"
-              value={inputValues[currency] ?? convertCurrency(baseValue, currency)}
-              autoComplete="off"
-              onChange={(e) => {
-                setBaseCurrency(currency);
-                setInputValues((prev) => ({
-                  ...prev,
-                  [currency]: e.target.value,
-                }));
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+          <div className="flex-1">
+            <div className="relative">
+              <Input
+                ref={(el) => {
+                  inputRefs.current[currency] = el;
+                }}
+                id={currency}
+                className="text-lg pr-10"
+                value={inputValues[currency] ?? convertCurrency(baseValue, currency)}
+                autoComplete="off"
+                onChange={(e) => {
+                  setBaseCurrency(currency);
+                  setInputValues((prev) => ({
+                    ...prev,
+                    [currency]: e.target.value,
+                  }));
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    evaluateExpression(currency);
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
+                onBlur={() => {
                   evaluateExpression(currency);
-                  (e.target as HTMLInputElement).blur();
-                }
-              }}
-              onBlur={() => {
-                evaluateExpression(currency);
-              }}
-              placeholder="0 or e.g. 100*3"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                setBaseCurrency(currency);
-                setBaseValue(0);
-                setInputValues((prev) => ({
-                  ...prev,
-                  [currency]: '',
-                }));
-              }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              aria-label={`Clear ${currency} value`}
-            >
-              <X className="h-4 w-4" />
-            </button>
+                }}
+                placeholder="0 or e.g. 100*3"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setBaseCurrency(currency);
+                  setBaseValue(0);
+                  setInputValues((prev) => ({
+                    ...prev,
+                    [currency]: '',
+                  }));
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                aria-label={`Clear ${currency} value`}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <HistoricalRateSparkline baseCurrency={baseCurrency} currency={currency} />
           </div>
 
           <DropdownMenu>
