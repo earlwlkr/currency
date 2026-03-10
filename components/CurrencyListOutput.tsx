@@ -13,8 +13,6 @@ import { Input } from '@/components/ui/input';
 import { useCurrencyContext } from '@/lib/CurrencyContext';
 import { calculate } from '@/lib/calculator';
 
-const PRESETS = [10, 50, 100, 500, 1000];
-
 const CurrencyListOutput = () => {
   const {
     baseValue,
@@ -77,36 +75,15 @@ const CurrencyListOutput = () => {
     }
   };
 
-  const handlePresetClick = (amount: number) => {
-    setBaseValue(amount);
-    // Update all input values to reflect the new base value
-    const newInputValues: Record<string, string> = {};
-    currenciesList.forEach((currency) => {
-      newInputValues[currency] = convertCurrency(amount, currency);
-    });
-    setInputValues(newInputValues);
-  };
-
   return (
     <div className="flex flex-col gap-y-2">
-      {/* Preset Buttons */}
-      <div className="flex gap-1.5 flex-wrap items-center">
-        {PRESETS.map((amount) => (
-          <button
-            key={amount}
-            type="button"
-            onClick={() => handlePresetClick(amount)}
-            className="px-2.5 py-1 text-xs font-medium rounded-md bg-muted hover:bg-accent hover:text-accent-foreground transition-colors"
-          >
-            {amount.toLocaleString()}
-          </button>
-        ))}
-        {lastFetchTime && (
-          <span className="ml-auto px-2.5 py-1 text-xs font-medium rounded-md bg-muted text-muted-foreground">
+      {lastFetchTime && (
+        <div className="flex justify-end">
+          <span className="px-2.5 py-1 text-xs font-medium rounded-md bg-muted text-muted-foreground">
             Updated {new Date(lastFetchTime).toLocaleDateString()}
           </span>
-        )}
-      </div>
+        </div>
+      )}
 
       {currenciesList.map((currency) => (
         <div
