@@ -4,7 +4,6 @@ import { DollarSign, Clock } from 'lucide-react';
 
 import { CurrencyInput } from '@/components/CurrencyInput';
 import { CurrencyListOutput } from '@/components/CurrencyListOutput';
-import { SavedBoardsPanel } from '@/components/SavedBoardsPanel';
 import { TimezoneConverter } from '@/components/TimezoneConverter';
 import { CurrencyProvider } from '@/lib/CurrencyContext';
 import { ShareButton } from '@/components/ShareButton';
@@ -21,8 +20,6 @@ export default function Home() {
             </h1>
             <ShareButton />
           </div>
-
-          <SavedBoardsPanel />
 
           <section>
             <h2 className="text-xs font-medium tracking-[0.15em] lowercase text-primary mb-3 flex items-center gap-2">
