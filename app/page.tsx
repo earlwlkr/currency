@@ -15,14 +15,14 @@ export default function Home() {
         <div className="w-full max-w-xl px-4 space-y-6">
           {/* Header with Share */}
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold tracking-tight">
+            <h1 className="text-xl font-semibold">
               converter
             </h1>
             <ShareButton />
           </div>
 
           <section>
-            <h2 className="text-xs font-medium tracking-[0.15em] lowercase text-primary mb-3 flex items-center gap-2">
+            <h2 className="mb-3 flex items-center gap-2 text-sm font-medium lowercase text-primary">
               <DollarSign className="h-3.5 w-3.5" />
               currency
             </h2>
@@ -33,7 +33,7 @@ export default function Home() {
           <div className="border-t border-border/50" />
 
           <section>
-            <h2 className="text-xs font-medium tracking-[0.15em] lowercase text-primary mb-3 flex items-center gap-2">
+            <h2 className="mb-3 flex items-center gap-2 text-sm font-medium lowercase text-primary">
               <Clock className="h-3.5 w-3.5" />
               timezone
             </h2>

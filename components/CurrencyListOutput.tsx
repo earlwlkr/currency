@@ -97,13 +97,13 @@ const CurrencyListOutput = () => {
             key={amount}
             type="button"
             onClick={() => handlePresetClick(amount)}
-            className="px-2.5 py-1 text-xs font-medium rounded-md bg-muted hover:bg-accent hover:text-accent-foreground transition-colors"
+            className="rounded-md bg-muted px-2.5 py-1 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             {amount.toLocaleString()}
           </button>
         ))}
         {lastFetchTime && (
-          <span className="ml-auto px-2.5 py-1 text-xs font-medium rounded-md bg-muted text-muted-foreground">
+          <span className="ml-auto rounded-md bg-muted px-2.5 py-1 text-sm text-muted-foreground">
             Updated {new Date(lastFetchTime).toLocaleDateString()}
           </span>
         )}
@@ -112,9 +112,9 @@ const CurrencyListOutput = () => {
       {currenciesList.map((currency) => (
         <div
           key={currency}
-          className="flex items-center gap-2 rounded-lg bg-muted/50 px-2.5 py-1.5"
+          className="flex items-center gap-2 border-b border-border/50 px-2.5 py-2"
         >
-          <span className="text-sm font-semibold tracking-wide w-12 shrink-0 self-start pt-3">
+          <span className="w-12 shrink-0 self-start pt-3 text-sm font-medium">
             {currency}
           </span>
           <div className="flex-1">
@@ -124,7 +124,7 @@ const CurrencyListOutput = () => {
                   inputRefs.current[currency] = el;
                 }}
                 id={currency}
-                className="text-lg pr-10"
+                className="pr-10 text-base"
                 value={inputValues[currency] ?? convertCurrency(baseValue, currency)}
                 autoComplete="off"
                 onChange={(e) => {

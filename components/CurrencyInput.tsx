@@ -82,7 +82,7 @@ const CurrencyInput = () => {
               <Plus className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
                 placeholder="Add another currency..."
-                className="text-lg pl-9 pr-10"
+                className="pl-9 pr-10 text-base"
                 {...getInputProps({
                   onKeyDown: (e) => {
                     if (inputValue) {
