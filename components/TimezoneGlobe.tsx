@@ -127,9 +127,11 @@ export function TimezoneGlobe({ timezoneList }: { timezoneList: string[] }) {
   const globeRef = useRef<ReturnType<typeof createGlobe> | null>(null);
   const [markers, setMarkers] = useState<MarkerWithLabel[]>([]);
   const phiRef = useRef(0);
-  console.log("timezoneList", timezoneList);
+  const thetaRef = useRef(0.3);
+  const isDragging = useRef(false);
+  const lastPointer = useRef({ x: 0, y: 0 });
+  const autoRotateRef = useRef(true);
 
-  // Build markers from timezone list
   useEffect(() => {
     const newMarkers: MarkerWithLabel[] = [];
     for (const tz of timezoneList) {
@@ -147,7 +149,6 @@ export function TimezoneGlobe({ timezoneList }: { timezoneList: string[] }) {
     setMarkers(newMarkers);
   }, [timezoneList]);
 
-  // Initialize globe
   useEffect(() => {
     if (!canvasRef.current) return;
 
@@ -155,8 +156,8 @@ export function TimezoneGlobe({ timezoneList }: { timezoneList: string[] }) {
       devicePixelRatio: 2,
       width: 400 * 2,
       height: 400 * 2,
-      phi: 0,
-      theta: 0.3,
+      phi: phiRef.current,
+      theta: thetaRef.current,
       dark: 0,
       diffuse: 1.2,
       mapSamples: 16000,
@@ -174,9 +175,12 @@ export function TimezoneGlobe({ timezoneList }: { timezoneList: string[] }) {
     globeRef.current = globe;
 
     function animate() {
-      phiRef.current += 0.003;
+      if (autoRotateRef.current && !isDragging.current) {
+        phiRef.current += 0.001;
+      }
       globe.update({
         phi: phiRef.current,
+        theta: thetaRef.current,
         markers: markers.map((m) => ({
           location: m.location,
           size: m.size,
@@ -191,6 +195,32 @@ export function TimezoneGlobe({ timezoneList }: { timezoneList: string[] }) {
       globe.destroy();
     };
   }, [markers]);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    isDragging.current = true;
+    autoRotateRef.current = false;
+    lastPointer.current = { x: e.clientX, y: e.clientY };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging.current) return;
+    const dx = e.clientX - lastPointer.current.x;
+    const dy = e.clientY - lastPointer.current.y;
+    phiRef.current += dx * 0.002;
+    thetaRef.current = Math.max(
+      -Math.PI / 2,
+      Math.min(Math.PI / 2, thetaRef.current + dy * 0.002),
+    );
+    lastPointer.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const handlePointerUp = () => {
+    isDragging.current = false;
+    setTimeout(() => {
+      autoRotateRef.current = true;
+    }, 3000);
+  };
 
   // Memoize label positions so they don't cause re-renders
   const labelElements = useMemo(
@@ -216,8 +246,12 @@ export function TimezoneGlobe({ timezoneList }: { timezoneList: string[] }) {
     <div className="relative w-full aspect-square max-w-[400px] mx-auto">
       <canvas
         ref={canvasRef}
-        className="w-full h-full"
+        className="w-full h-full touch-none cursor-grab active:cursor-grabbing"
         style={{ width: 400, height: 400, maxWidth: "100%" }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
       />
       {labelElements}
       <style jsx global>{`
