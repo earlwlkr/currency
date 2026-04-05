@@ -207,10 +207,10 @@ export function TimezoneGlobe({ timezoneList }: { timezoneList: string[] }) {
     if (!isDragging.current) return;
     const dx = e.clientX - lastPointer.current.x;
     const dy = e.clientY - lastPointer.current.y;
-    phiRef.current += dx * 0.002;
+    phiRef.current += dx * 0.005;
     thetaRef.current = Math.max(
       -Math.PI / 2,
-      Math.min(Math.PI / 2, thetaRef.current + dy * 0.002),
+      Math.min(Math.PI / 2, thetaRef.current + dy * 0.005),
     );
     lastPointer.current = { x: e.clientX, y: e.clientY };
   };
