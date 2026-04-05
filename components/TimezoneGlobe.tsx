@@ -158,7 +158,7 @@ export function TimezoneGlobe({ timezoneList }: { timezoneList: string[] }) {
       height: 400 * 2,
       phi: phiRef.current,
       theta: thetaRef.current,
-      dark: 0,
+      dark: 1,
       diffuse: 1.2,
       mapSamples: 16000,
       mapBrightness: 6,
@@ -176,7 +176,7 @@ export function TimezoneGlobe({ timezoneList }: { timezoneList: string[] }) {
 
     function animate() {
       if (autoRotateRef.current && !isDragging.current) {
-        phiRef.current += 0.001;
+        phiRef.current += 0.0003;
       }
       globe.update({
         phi: phiRef.current,
