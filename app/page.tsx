@@ -1,14 +1,19 @@
 'use client';
 
 import { DollarSign, Clock } from 'lucide-react';
+import { useAtom } from 'jotai';
 
 import { CurrencyInput } from '@/components/CurrencyInput';
 import { CurrencyListOutput } from '@/components/CurrencyListOutput';
 import { TimezoneConverter } from '@/components/TimezoneConverter';
+import { TimezoneGlobe } from '@/components/TimezoneGlobe';
 import { CurrencyProvider } from '@/lib/CurrencyContext';
 import { ShareButton } from '@/components/ShareButton';
+import { timezoneListAtom } from '@/lib/timezoneAtoms';
 
 export default function Home() {
+  const [timezoneList] = useAtom(timezoneListAtom);
+
   return (
     <CurrencyProvider>
       <main className="flex min-h-screen flex-col items-center py-6">
@@ -37,6 +42,7 @@ export default function Home() {
               <Clock className="h-3.5 w-3.5" />
               timezone
             </h2>
+            <TimezoneGlobe timezoneList={timezoneList} />
             <TimezoneConverter />
           </section>
         </div>
