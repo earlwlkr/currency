@@ -4,8 +4,9 @@
   "display": "standalone",
   "scope": "/",
   "start_url": "/",
-  "name": "currency",
-  "short_name": "currency",
+  "name": "Currency & Time Converter",
+  "short_name": "Currency",
+  "description": "Quick converter for checking money amounts and time differences in one simple screen.",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",

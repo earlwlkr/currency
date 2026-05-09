@@ -7,8 +7,8 @@ import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 
 export const metadata: Metadata = {
-  title: 'Currency',
-  description: 'Currency PWA application',
+  title: 'Currency & Time Converter',
+  description: 'Quick converter for checking money amounts and time differences in one simple screen.',
   generator: 'Next.js',
   manifest: '/manifest.json',
   keywords: ['nextjs', 'pwa', 'next-pwa', 'currency', 'currencies'],
