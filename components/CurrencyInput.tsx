@@ -79,10 +79,10 @@ const CurrencyInput = () => {
             {...getRootProps({}, { suppressRefError: true })}
           >
             <div className="relative">
-              <Plus className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Plus className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
               <Input
-                placeholder="Add another currency..."
-                className="pl-9 pr-10 text-base"
+                placeholder="Add currency"
+                className="border-dashed bg-transparent pl-9 pr-11 text-base hover:border-primary/50"
                 {...getInputProps({
                   onKeyDown: (e) => {
                     if (inputValue) {
@@ -105,7 +105,7 @@ const CurrencyInput = () => {
                 <button
                   type="button"
                   onClick={() => setState({ inputValue: '' })}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                   aria-label="Clear currency input"
                 >
                   <X className="h-4 w-4" />

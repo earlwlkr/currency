@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 
 import { fetchCurrencyRates } from '@/lib/CurrencyContext';
 
@@ -133,13 +134,12 @@ export function HistoricalRateSparkline({
 }: HistoricalRateSparklineProps) {
   const [points, setPoints] = useState<Point[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     let isCancelled = false;
 
     if (baseCurrency === currency) {
-      setPoints([]);
-      setStatus('idle');
       return;
     }
 
@@ -202,11 +202,11 @@ export function HistoricalRateSparkline({
   }
 
   if (status === 'loading') {
-    return <p className="mt-1 text-[11px] text-muted-foreground">Loading 7d trend…</p>;
+    return <p className="mt-1 text-xs text-muted-foreground">Loading 7d trend…</p>;
   }
 
   if (status === 'error' || !trend) {
-    return <p className="mt-1 text-[11px] text-muted-foreground">7d trend unavailable</p>;
+    return <p className="mt-1 text-xs text-muted-foreground">7d trend unavailable</p>;
   }
 
   const isUp = trend.delta >= 0;
@@ -215,25 +215,35 @@ export function HistoricalRateSparkline({
   const fillClass = isUp ? 'text-emerald-500/10' : 'text-rose-500/10';
 
   return (
-    <div className="mt-1 flex items-center justify-between gap-3">
-      <div className="min-w-0">
-        <p className="text-[11px] font-medium text-muted-foreground">
-          1 {baseCurrency} ≈ {trend.last.toFixed(4)} {currency}
-        </p>
-        <p className={`text-[11px] ${isUp ? 'text-emerald-600' : 'text-rose-600'}`}>
-          {isUp ? '+' : ''}
-          {trend.delta.toFixed(2)}% over 7d
-        </p>
-      </div>
-      <svg
-        viewBox="0 0 120 32"
-        className="h-8 w-[120px] shrink-0 overflow-visible"
-        role="img"
-        aria-label={`Seven day trend from ${formatDayLabel(trend.startDate)} to ${formatDayLabel(trend.endDate)}`}
+    <div className="mt-1">
+      <button
+        type="button"
+        onClick={() => setIsExpanded((value) => !value)}
+        className="flex min-h-8 items-center gap-1.5 rounded-md pr-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        aria-expanded={isExpanded}
       >
-        <path d={`M 0 32 ${path} L 120 32 Z`} className={fillClass} fill="currentColor" />
-        <path d={path} className={strokeClass} fill="none" strokeWidth="2" strokeLinecap="round" />
-      </svg>
+        <span>7d</span>
+        <span className={isUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}>
+          {isUp ? '+' : ''}{trend.delta.toFixed(2)}%
+        </span>
+        <ChevronDown className={`h-3 w-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+      </button>
+      {isExpanded ? (
+        <div className="flex items-center justify-between gap-3 pb-1 pt-1">
+          <p className="text-xs font-medium text-muted-foreground">
+            1 {baseCurrency} ≈ {trend.last.toFixed(4)} {currency}
+          </p>
+          <svg
+            viewBox="0 0 120 32"
+            className="h-8 w-[120px] shrink-0 overflow-visible"
+            role="img"
+            aria-label={`Seven day trend from ${formatDayLabel(trend.startDate)} to ${formatDayLabel(trend.endDate)}`}
+          >
+            <path d={`M 0 32 ${path} L 120 32 Z`} className={fillClass} fill="currentColor" />
+            <path d={path} className={strokeClass} fill="none" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </div>
+      ) : null}
     </div>
   );
 }

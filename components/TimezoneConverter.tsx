@@ -1,8 +1,8 @@
 'use client';
 
 import { useAtom } from 'jotai';
-import { useEffect } from 'react';
-import { MoreVertical, Trash2 } from 'lucide-react';
+import { useEffect, useSyncExternalStore } from 'react';
+import { MoreHorizontal, Trash2 } from 'lucide-react';
 import type { DateTimeFormatOptions } from 'intl';
 
 import {
@@ -31,8 +31,22 @@ const convertTimezone = (date: Date, targetTimeZone: string) => {
   }
 };
 
+const subscribeToClock = (onStoreChange: () => void) => {
+  const interval = window.setInterval(onStoreChange, 30_000);
+  return () => window.clearInterval(interval);
+};
+
+const getMinuteSnapshot = () => Math.floor(Date.now() / 60_000);
+const getServerMinuteSnapshot = () => 0;
+
 export const TimezoneConverter = () => {
   const [timezoneList, setTimezoneList] = useAtom(timezoneListAtom);
+  const currentMinute = useSyncExternalStore(
+    subscribeToClock,
+    getMinuteSnapshot,
+    getServerMinuteSnapshot
+  );
+  const currentTime = new Date(currentMinute * 60_000);
 
   // Read timezones from URL params on mount
   useEffect(() => {
@@ -47,11 +61,11 @@ export const TimezoneConverter = () => {
   };
 
   return (
-    <div className="flex flex-col gap-y-1.5">
+    <div className="flex flex-col">
       {timezoneList.map((timezone) => (
         <div
           key={timezone}
-          className="flex items-center justify-between border-b border-border/50 px-2.5 py-2"
+          className="row-enter flex items-center justify-between border-b border-border/60 py-3 pl-2 transition-colors hover:bg-muted/35"
         >
           <div className="flex flex-col min-w-0 flex-1">
             <span className="text-sm font-medium">
@@ -61,17 +75,17 @@ export const TimezoneConverter = () => {
               {formatTimezone(timezone).sub}
             </span>
           </div>
-          <span className="shrink-0 pl-4 text-base font-medium tabular-nums">
-            {convertTimezone(new Date(), timezone)}
+          <span className="shrink-0 pl-4 text-lg font-semibold tabular-nums tracking-tight">
+            {convertTimezone(currentTime, timezone)}
           </span>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="ml-2 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground shrink-0"
+                className="ml-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 aria-label={`Open ${timezone} actions`}
               >
-                <MoreVertical className="h-4 w-4" />
+                <MoreHorizontal className="h-4 w-4" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import createGlobe from "cobe";
 import cityTimezones from "city-timezones";
 
@@ -125,14 +125,13 @@ function getCoordsForTimezone(
 export function TimezoneGlobe({ timezoneList }: { timezoneList: string[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const globeRef = useRef<ReturnType<typeof createGlobe> | null>(null);
-  const [markers, setMarkers] = useState<MarkerWithLabel[]>([]);
   const phiRef = useRef(0);
   const thetaRef = useRef(0.3);
   const isDragging = useRef(false);
   const lastPointer = useRef({ x: 0, y: 0 });
   const autoRotateRef = useRef(true);
 
-  useEffect(() => {
+  const markers = useMemo(() => {
     const newMarkers: MarkerWithLabel[] = [];
     for (const tz of timezoneList) {
       const coords = getCoordsForTimezone(tz);
@@ -146,16 +145,17 @@ export function TimezoneGlobe({ timezoneList }: { timezoneList: string[] }) {
         });
       }
     }
-    setMarkers(newMarkers);
+    return newMarkers;
   }, [timezoneList]);
 
   useEffect(() => {
     if (!canvasRef.current) return;
 
+    const { width, height } = canvasRef.current.getBoundingClientRect();
     const globe = createGlobe(canvasRef.current, {
       devicePixelRatio: 2,
-      width: 400 * 2,
-      height: 400 * 2,
+      width: width * 2,
+      height: height * 2,
       phi: phiRef.current,
       theta: thetaRef.current,
       dark: 1,
@@ -163,8 +163,8 @@ export function TimezoneGlobe({ timezoneList }: { timezoneList: string[] }) {
       mapSamples: 16000,
       mapBrightness: 6,
       baseColor: [0.85, 0.85, 0.9],
-      markerColor: [0.2, 0.5, 1],
-      glowColor: [0.7, 0.8, 1],
+      markerColor: [0.12, 0.78, 0.66],
+      glowColor: [0.35, 0.72, 0.68],
       markers: markers.map((m) => ({
         location: m.location,
         size: m.size,
@@ -243,17 +243,20 @@ export function TimezoneGlobe({ timezoneList }: { timezoneList: string[] }) {
   );
 
   return (
-    <div className="relative w-full aspect-square max-w-[400px] mx-auto">
+    <div className="relative mx-auto h-[240px] w-full max-w-[360px] overflow-hidden md:h-[280px]">
       <canvas
         ref={canvasRef}
-        className="w-full h-full touch-none cursor-grab active:cursor-grabbing"
-        style={{ width: 400, height: 400, maxWidth: "100%" }}
+        className="h-full w-full touch-none cursor-grab active:cursor-grabbing"
+        style={{ width: '100%', height: '100%' }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
       />
       {labelElements}
+      <div className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full border border-border/60 bg-background/80 px-3 py-1 text-[11px] text-muted-foreground backdrop-blur-sm">
+        Drag to explore
+      </div>
       <style jsx global>{`
         .globe-label {
           position: absolute;

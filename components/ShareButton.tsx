@@ -11,7 +11,7 @@ import { generateShareableUrl } from '@/lib/urlParams';
 export function ShareButton() {
   const { baseValue, currenciesList } = useCurrencyContext();
   const [timezoneList] = useAtom(timezoneListAtom);
-  const [status, setStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
+  const [status, setStatus] = useState<'idle' | 'shared' | 'copied' | 'failed'>('idle');
 
   const resetStatus = () => {
     setTimeout(() => setStatus('idle'), 2000);
@@ -25,10 +25,23 @@ export function ShareButton() {
     });
 
     try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Currency + Time',
+          text: 'Open this currency and timezone setup.',
+          url,
+        });
+        setStatus('shared');
+        resetStatus();
+        return;
+      }
       await navigator.clipboard.writeText(url);
       setStatus('copied');
       resetStatus();
-    } catch {
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return;
+      }
       // Fallback: select and copy manually if clipboard API fails
       const textArea = document.createElement('textarea');
       textArea.value = url;
@@ -45,14 +58,14 @@ export function ShareButton() {
     <button
       type="button"
       onClick={handleShare}
-      className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-      title="Copy shareable link"
+      className="flex min-h-11 items-center gap-2 rounded-lg border border-border bg-background px-3 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+      title="Share this setup"
       aria-live="polite"
     >
-      {status === 'copied' ? (
+      {status === 'copied' || status === 'shared' ? (
         <>
           <Check className="h-3.5 w-3.5" />
-          Copied!
+          {status === 'shared' ? 'Shared' : 'Copied'}
         </>
       ) : status === 'failed' ? (
         <>
