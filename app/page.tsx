@@ -74,26 +74,15 @@ function ConverterWorkspace() {
       <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
         <section
           className={cn(
-            'workspace-enter grid items-start gap-8 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-16',
+            'workspace-enter',
             activeWorkspace !== 'currency' && 'hidden'
           )}
-          aria-labelledby="currency-heading"
+          aria-label="Currency converter"
         >
-            <div className="lg:sticky lg:top-8">
-              <p className="section-index">01 / Currency</p>
-              <h2 id="currency-heading" className="mt-4 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
-                Convert once.
-                <br className="hidden lg:block" /> Read every rate.
-              </h2>
-              <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
-                Edit any amount to make it the base. Simple calculations work too.
-              </p>
-            </div>
-
-            <div className="min-w-0">
-              <CurrencyListOutput />
-              <CurrencyInput />
-            </div>
+          <div className="min-w-0">
+            <CurrencyListOutput />
+            <CurrencyInput />
+          </div>
         </section>
 
         <section
