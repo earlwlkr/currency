@@ -87,23 +87,12 @@ function ConverterWorkspace() {
 
         <section
           className={cn(
-            'workspace-enter grid items-start gap-8 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-16',
+            'workspace-enter',
             activeWorkspace !== 'time' && 'hidden'
           )}
-          aria-labelledby="time-heading"
+          aria-label="Time converter"
         >
-            <div className="lg:sticky lg:top-8">
-              <p className="section-index">02 / Time</p>
-              <h2 id="time-heading" className="mt-4 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
-                Keep every city
-                <br className="hidden lg:block" /> on the same page.
-              </h2>
-              <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
-                Compare right now, or choose a local date and time to plan ahead.
-              </p>
-            </div>
-
-            <TimezoneConverter />
+          <TimezoneConverter />
         </section>
       </div>
     </main>
