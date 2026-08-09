@@ -1,28 +1,47 @@
 'use client';
 
-import Downshift, { DownshiftState, StateChangeOptions } from 'downshift';
-import { Plus, X } from 'lucide-react';
+import { useMemo } from 'react';
+import Downshift, {
+  type DownshiftState,
+  type StateChangeOptions,
+} from 'downshift';
+import { Plus, Search, X } from 'lucide-react';
 
-import countryByCurrencyCode from '@/config/country-by-currency-code.json';
-import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
-import { useRef } from 'react';
+import countryByCurrencyCode from '@/config/country-by-currency-code.json';
 import { useCurrencyContext } from '@/lib/CurrencyContext';
+import { formatCurrencyName } from '@/lib/currencyUtils';
+import { cn } from '@/lib/utils';
+
+interface CurrencyOption {
+  currency_code: string;
+  name: string;
+}
+
+const currencyOptions: CurrencyOption[] = Array.from(
+  new Set(
+    countryByCurrencyCode
+      .map((item) => item.currency_code)
+      .filter(
+        (currencyCode): currencyCode is string =>
+          typeof currencyCode === 'string' && currencyCode.length === 3
+      )
+  )
+)
+  .map((currencyCode) => ({
+    currency_code: currencyCode,
+    name: formatCurrencyName(currencyCode),
+  }))
+  .sort((a, b) => a.currency_code.localeCompare(b.currency_code));
 
 function stateReducer(
-  state: DownshiftState<any>,
-  changes: StateChangeOptions<any>
+  _state: DownshiftState<CurrencyOption>,
+  changes: StateChangeOptions<CurrencyOption>
 ) {
-  // this prevents the menu from being closed when the user
-  // selects an item with a keyboard or mouse
   switch (changes.type) {
     case Downshift.stateChangeTypes.keyDownEnter:
     case Downshift.stateChangeTypes.clickItem:
-      return {
-        ...changes,
-        inputValue: '',
-      };
+      return { ...changes, inputValue: '', isOpen: false };
     default:
       return changes;
   }
@@ -30,34 +49,33 @@ function stateReducer(
 
 function getMatchingItems(
   inputValue: string,
-  items: typeof countryByCurrencyCode
+  selectedCurrencies: string[]
 ) {
-  if (!inputValue) {
-    return items;
-  }
-  return items.filter(
-    (item) =>
-      item.currency_code &&
-      (item.country.toLowerCase().includes(inputValue.toLowerCase()) ||
-        item.currency_code.toLowerCase().includes(inputValue.toLowerCase()))
-  );
+  const query = inputValue.trim().toLowerCase();
+  if (!query) return [];
+
+  return currencyOptions
+    .filter(
+      (item) =>
+        !selectedCurrencies.includes(item.currency_code) &&
+        (item.currency_code.toLowerCase().includes(query) ||
+          item.name.toLowerCase().includes(query))
+    )
+    .slice(0, 30);
 }
 
 const CurrencyInput = () => {
   const { currenciesList, setCurrenciesList } = useCurrencyContext();
-  const currencies = useRef(countryByCurrencyCode);
 
   return (
-    <Downshift
+    <Downshift<CurrencyOption>
       onChange={(selection) => {
-        if (!selection) {
+        if (!selection || currenciesList.includes(selection.currency_code)) {
           return;
         }
-        if (!currenciesList.includes(selection.currency_code)) {
-          setCurrenciesList([...currenciesList, selection.currency_code]);
-        }
+        setCurrenciesList([...currenciesList, selection.currency_code]);
       }}
-      itemToString={(item) => (item ? item.currency_code : '')}
+      itemToString={(item) => item?.currency_code ?? ''}
       stateReducer={stateReducer}
     >
       {({
@@ -67,36 +85,39 @@ const CurrencyInput = () => {
         getItemProps,
         isOpen,
         inputValue,
-        clearSelection,
         highlightedIndex,
-        selectedItem,
         selectItemAtIndex,
         setState,
-      }) => (
-        <div className="relative">
-          <div
-            className="mt-3"
-            {...getRootProps({}, { suppressRefError: true })}
-          >
-            <div className="relative">
-              <Plus className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
-              <Input
-                placeholder="Add currency"
-                className="border-dashed bg-transparent pl-9 pr-11 text-base hover:border-primary/50"
+      }) => {
+        const matchingItems = getMatchingItems(
+          inputValue ?? '',
+          currenciesList
+        );
+
+        return (
+          <div className="relative" {...getRootProps({}, { suppressRefError: true })}>
+            <div className="group flex min-h-16 items-center border-b border-border">
+              <span className="ml-3 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border text-muted-foreground transition-colors group-focus-within:border-primary group-focus-within:text-primary">
+                <Plus className="h-4 w-4" />
+              </span>
+              <label className="sr-only" htmlFor="currency-search">
+                Search currencies to add
+              </label>
+              <input
+                placeholder="Add a currency"
+                className="h-16 min-w-0 flex-1 bg-transparent px-3 text-sm font-medium outline-none placeholder:text-muted-foreground"
                 {...getInputProps({
-                  onKeyDown: (e) => {
-                    if (inputValue) {
-                      if (['Enter', 'Tab'].includes(e.key) && !highlightedIndex) {
-                        e.preventDefault();
-                        const options = getMatchingItems(
-                          inputValue,
-                          currencies.current
-                        );
-                        if (options.length > 0) {
-                          selectItemAtIndex(0);
-                          clearSelection();
-                        }
-                      }
+                  id: 'currency-search',
+                  'aria-label': 'Search currencies to add',
+                  onKeyDown: (event) => {
+                    if (
+                      (event.key === 'Enter' || event.key === 'Tab') &&
+                      inputValue &&
+                      highlightedIndex === null &&
+                      matchingItems.length > 0
+                    ) {
+                      event.preventDefault();
+                      selectItemAtIndex(0);
                     }
                   },
                 })}
@@ -105,43 +126,59 @@ const CurrencyInput = () => {
                 <button
                   type="button"
                   onClick={() => setState({ inputValue: '' })}
-                  className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                  aria-label="Clear currency input"
+                  className="mr-1 flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  aria-label="Clear currency search"
                 >
                   <X className="h-4 w-4" />
                 </button>
-              ) : null}
+              ) : (
+                <Search className="mr-4 h-4 w-4 text-muted-foreground/60" aria-hidden="true" />
+              )}
+            </div>
+
+            <div
+              {...getMenuProps()}
+              className={cn(
+                'absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-[0_18px_50px_rgba(20,20,16,0.16)]',
+                (!isOpen || !inputValue) && 'hidden'
+              )}
+            >
+              <ScrollArea
+                className="p-1.5"
+                style={{
+                  height: matchingItems.length
+                    ? Math.min(matchingItems.length * 40 + 12, 256)
+                    : 76,
+                }}
+              >
+                {matchingItems.length > 0 ? (
+                  matchingItems.map((item, index) => (
+                    <div
+                      key={item.currency_code}
+                      className={cn(
+                        'flex cursor-default items-center justify-between rounded-lg px-3 py-2.5 transition-colors',
+                        highlightedIndex === index && 'bg-accent text-accent-foreground'
+                      )}
+                      {...getItemProps({ index, item })}
+                    >
+                      <span className="text-sm font-bold tracking-[0.04em]">
+                        {item.currency_code}
+                      </span>
+                      <span className="ml-4 truncate text-xs text-muted-foreground">
+                        {item.name}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+                    No new currencies found
+                  </p>
+                )}
+              </ScrollArea>
             </div>
           </div>
-
-          {isOpen && inputValue ? (
-            <ScrollArea
-              {...getMenuProps()}
-              className="mt-2 h-40 rounded-lg border bg-popover text-popover-foreground shadow-lg z-50 absolute w-full"
-            >
-              {getMatchingItems(inputValue, currencies.current).map(
-                (item, index) => (
-                  <div
-                    key={item.country + item.currency_code}
-                    className={cn(
-                      'px-2.5 py-1.5 mx-1 my-0.5 rounded-md cursor-default',
-                      highlightedIndex === index ? 'bg-accent text-accent-foreground' : '',
-                      selectedItem === item ? 'font-bold' : ''
-                    )}
-                    {...getItemProps({
-                      index,
-                      item,
-                    })}
-                  >
-                    <span className="font-medium text-sm">{item.currency_code}</span>
-                    <span className="text-muted-foreground text-sm ml-2">{item.country}</span>
-                  </div>
-                )
-              )}
-            </ScrollArea>
-          ) : null}
-        </div>
-      )}
+        );
+      }}
     </Downshift>
   );
 };

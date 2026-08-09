@@ -131,10 +131,13 @@ export function searchTimezones(query: string): SearchResult[] {
         if (offsetMatch) {
             const sign = offsetMatch[1] === '+' ? '-' : '+'; // Etc/GMT offsets are inverted
             const hours = parseInt(offsetMatch[2], 10);
-            const gmtZone = `Etc/GMT${sign}${hours}`;
-            if (allTimezones.includes(gmtZone)) {
+            const gmtZone = hours === 0 ? 'Etc/GMT' : `Etc/GMT${sign}${hours}`;
+            try {
+                new Intl.DateTimeFormat('en-US', { timeZone: gmtZone });
                 const fmt = formatTimezone(gmtZone);
                 addResult(gmtZone, fmt.main, fmt.sub);
+            } catch {
+                // Ignore offsets outside the supported IANA range.
             }
         }
     }
@@ -168,13 +171,12 @@ const ABBR_OVERRIDES: Record<string, Record<string, string>> = {
     // Add more as needed
 };
 
-export function formatTimezone(timezone: string): {
+export function formatTimezone(timezone: string, date = new Date()): {
     main: string;
     sub: string;
     alt: string;
 } {
     try {
-        const date = new Date();
         const formatter = new Intl.DateTimeFormat('en-US', {
             timeZone: timezone,
             timeZoneName: 'longOffset',
@@ -198,8 +200,8 @@ export function formatTimezone(timezone: string): {
 
         // Handle Etc/GMT cases
         if (timezone.startsWith('Etc/')) {
-            const main = timezone.replace('Etc/', '');
-            const sub = offset;
+            const main = offset === 'GMT' ? 'UTC' : offset.replace('GMT', 'UTC');
+            const sub = 'Fixed offset';
             return { main, sub, alt: `${main} (${sub})` };
         }
 

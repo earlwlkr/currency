@@ -3,8 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
-import { fetchCurrencyRates } from '@/lib/CurrencyContext';
-
 type HistoricalRateSparklineProps = {
   baseCurrency: string;
   currency: string;
@@ -16,17 +14,19 @@ type Point = {
 };
 
 const DAYS = 7;
+const dailyRequestCache = new Map<string, Promise<{ usd?: Record<string, number> }>>();
 
 function formatDayLabel(date: string) {
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
+    timeZone: 'UTC',
   }).format(new Date(date));
 }
 
 function buildLastDates(days: number) {
   const dates: string[] = [];
-  for (let offset = days - 1; offset >= 0; offset -= 1) {
+  for (let offset = days; offset >= 1; offset -= 1) {
     const date = new Date();
     date.setUTCDate(date.getUTCDate() - offset);
     dates.push(date.toISOString().slice(0, 10));
@@ -34,7 +34,7 @@ function buildLastDates(days: number) {
   return dates;
 }
 
-async function fetchDailyUsdRates(date: string) {
+async function fetchDailyUsdRatesUncached(date: string) {
   const storageKey = `currencyRates:${date}`;
 
   if (typeof indexedDB !== 'undefined') {
@@ -59,10 +59,22 @@ async function fetchDailyUsdRates(date: string) {
   const json = await response.json();
 
   if (typeof indexedDB !== 'undefined') {
-    void persistCurrencyRatesToIdb(storageKey, json);
+    void persistCurrencyRatesToIdb(storageKey, json).catch(() => undefined);
   }
 
   return json;
+}
+
+function fetchDailyUsdRates(date: string) {
+  const existingRequest = dailyRequestCache.get(date);
+  if (existingRequest) return existingRequest;
+
+  const request = fetchDailyUsdRatesUncached(date).catch((error: unknown) => {
+    dailyRequestCache.delete(date);
+    throw error;
+  });
+  dailyRequestCache.set(date, request);
+  return request;
 }
 
 async function fetchCurrencyRatesFromIdb(key: string) {
@@ -139,7 +151,7 @@ export function HistoricalRateSparkline({
   useEffect(() => {
     let isCancelled = false;
 
-    if (baseCurrency === currency) {
+    if (!isExpanded || baseCurrency === currency) {
       return;
     }
 
@@ -147,9 +159,13 @@ export function HistoricalRateSparkline({
       setStatus('loading');
       try {
         const dates = buildLastDates(DAYS);
-        const dailyRates = await Promise.all(dates.map((date) => fetchDailyUsdRates(date)));
+        const dailyRates = await Promise.allSettled(
+          dates.map((date) => fetchDailyUsdRates(date))
+        );
         const nextPoints = dailyRates
-          .map((rates, index) => {
+          .map((result, index) => {
+            if (result.status !== 'fulfilled') return null;
+            const rates = result.value;
             const rate = calculatePairRate(rates, baseCurrency, currency);
             if (rate === null || !Number.isFinite(rate)) {
               return null;
@@ -178,7 +194,7 @@ export function HistoricalRateSparkline({
     return () => {
       isCancelled = true;
     };
-  }, [baseCurrency, currency]);
+  }, [baseCurrency, currency, isExpanded]);
 
   const trend = useMemo(() => {
     if (points.length < 2) {
@@ -201,48 +217,48 @@ export function HistoricalRateSparkline({
     return null;
   }
 
-  if (status === 'loading') {
-    return <p className="mt-1 text-xs text-muted-foreground">Loading 7d trend…</p>;
-  }
-
-  if (status === 'error' || !trend) {
-    return <p className="mt-1 text-xs text-muted-foreground">7d trend unavailable</p>;
-  }
-
-  const isUp = trend.delta >= 0;
+  const isUp = (trend?.delta ?? 0) >= 0;
   const path = buildSparklinePath(points);
   const strokeClass = isUp ? 'stroke-emerald-500' : 'stroke-rose-500';
   const fillClass = isUp ? 'text-emerald-500/10' : 'text-rose-500/10';
 
   return (
-    <div className="mt-1">
+    <div className="mt-0.5 flex flex-col items-end">
       <button
         type="button"
         onClick={() => setIsExpanded((value) => !value)}
-        className="flex min-h-8 items-center gap-1.5 rounded-md pr-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        className="flex min-h-7 items-center gap-1.5 rounded-full px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         aria-expanded={isExpanded}
       >
-        <span>7d</span>
-        <span className={isUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}>
-          {isUp ? '+' : ''}{trend.delta.toFixed(2)}%
-        </span>
+        <span>{trend ? '7d' : '7d trend'}</span>
+        {trend ? (
+          <span className={isUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}>
+            {isUp ? '+' : ''}{trend.delta.toFixed(2)}%
+          </span>
+        ) : null}
         <ChevronDown className={`h-3 w-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
       </button>
       {isExpanded ? (
-        <div className="flex items-center justify-between gap-3 pb-1 pt-1">
-          <p className="text-xs font-medium text-muted-foreground">
-            1 {baseCurrency} ≈ {trend.last.toFixed(4)} {currency}
-          </p>
-          <svg
-            viewBox="0 0 120 32"
-            className="h-8 w-[120px] shrink-0 overflow-visible"
-            role="img"
-            aria-label={`Seven day trend from ${formatDayLabel(trend.startDate)} to ${formatDayLabel(trend.endDate)}`}
-          >
-            <path d={`M 0 32 ${path} L 120 32 Z`} className={fillClass} fill="currentColor" />
-            <path d={path} className={strokeClass} fill="none" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-        </div>
+        status === 'loading' ? (
+          <p className="py-2 text-[11px] text-muted-foreground">Loading trend…</p>
+        ) : status === 'error' || !trend ? (
+          <p className="py-2 text-[11px] text-muted-foreground">Trend unavailable</p>
+        ) : (
+          <div className="flex items-center justify-end gap-3 pb-1 pt-1">
+            <p className="text-[11px] font-medium text-muted-foreground">
+              1 {baseCurrency} ≈ {trend.last.toFixed(4)} {currency}
+            </p>
+            <svg
+              viewBox="0 0 120 32"
+              className="h-7 w-[104px] shrink-0 overflow-visible"
+              role="img"
+              aria-label={`Seven day trend from ${formatDayLabel(trend.startDate)} to ${formatDayLabel(trend.endDate)}`}
+            >
+              <path d={`M 0 32 ${path} L 120 32 Z`} className={fillClass} fill="currentColor" />
+              <path d={path} className={strokeClass} fill="none" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </div>
+        )
       ) : null}
     </div>
   );

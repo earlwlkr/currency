@@ -1,27 +1,31 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ChevronDown,
   ChevronUp,
   GripVertical,
   MoreHorizontal,
+  RefreshCw,
   Trash2,
   X,
 } from 'lucide-react';
 
+import { HistoricalRateSparkline } from '@/components/HistoricalRateSparkline';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
 import { useCurrencyContext } from '@/lib/CurrencyContext';
 import { calculate } from '@/lib/calculator';
-import { HistoricalRateSparkline } from '@/components/HistoricalRateSparkline';
+import { formatCurrencyName } from '@/lib/currencyUtils';
+import { cn } from '@/lib/utils';
 
 const PRESETS = [10, 50, 100, 500, 1000];
+
+const normalizeAmount = (value: string) => value.replace(/,/g, '').trim();
 
 const CurrencyListOutput = () => {
   const {
@@ -32,82 +36,108 @@ const CurrencyListOutput = () => {
     currenciesList,
     setCurrenciesList,
     convertCurrency,
+    convertCurrencyValue,
     lastFetchTime,
+    rateStatus,
+    refreshRates,
   } = useCurrencyContext();
 
-  // Track input values separately to allow typing expressions
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const [draggedCurrency, setDraggedCurrency] = useState<string | null>(null);
   const [updatedCurrency, setUpdatedCurrency] = useState<string | null>(null);
+  const [invalidCurrency, setInvalidCurrency] = useState<string | null>(null);
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const updateTimeoutRef = useRef<number | null>(null);
+  const skipBlurEvaluationRef = useRef<string | null>(null);
 
-  // Update input values when baseValue/baseCurrency changes externally (presets, etc)
   useEffect(() => {
-    const newInputValues: Record<string, string> = {};
+    const nextValues: Record<string, string> = {};
     currenciesList.forEach((currency) => {
-      // Only update if the input is not currently focused (user is not typing)
       if (document.activeElement !== inputRefs.current[currency]) {
-        newInputValues[currency] = convertCurrency(baseValue, currency);
+        nextValues[currency] = convertCurrency(baseValue, currency);
       }
     });
-    setInputValues((prev) => ({ ...prev, ...newInputValues }));
-  }, [baseValue, baseCurrency, currenciesList, convertCurrency]);
+    setInputValues((current) => ({ ...current, ...nextValues }));
+  }, [baseCurrency, baseValue, convertCurrency, currenciesList]);
 
-  const evaluateExpression = (currency: string) => {
-    const inputValue = inputValues[currency];
-    
-    if (!inputValue) {
-      setBaseValue(0);
-      return;
-    }
-    
-    setBaseCurrency(currency);
-    
-    // Check if it looks like an expression (contains operators)
-    if (/[+\-*/]./.test(inputValue)) {
-      try {
-        const result = calculate(inputValue);
-        if (!isNaN(result) && isFinite(result)) {
-          setBaseValue(result);
-          setUpdatedCurrency(currency);
-          // Update the input to show the result
-          setInputValues((prev) => ({
-            ...prev,
-            [currency]: String(result),
-          }));
-        }
-      } catch {
-        // Invalid expression, keep the raw input
+  useEffect(
+    () => () => {
+      if (updateTimeoutRef.current) {
+        window.clearTimeout(updateTimeoutRef.current);
       }
-    } else {
-      // Simple number
-      const value = Number(inputValue.replace(/[^\d.]/g, ''));
-      if (!isNaN(value)) {
-        setBaseValue(value);
-        setUpdatedCurrency(currency);
-      }
-    }
+    },
+    []
+  );
 
+  const markUpdated = (currency: string) => {
+    setUpdatedCurrency(currency);
     if (updateTimeoutRef.current) {
       window.clearTimeout(updateTimeoutRef.current);
     }
-    updateTimeoutRef.current = window.setTimeout(() => setUpdatedCurrency(null), 450);
+    updateTimeoutRef.current = window.setTimeout(
+      () => setUpdatedCurrency(null),
+      450
+    );
+  };
+
+  const evaluateExpression = (currency: string) => {
+    const rawValue = inputValues[currency] ?? '';
+    const normalizedValue = normalizeAmount(rawValue);
+
+    if (!normalizedValue) {
+      setBaseCurrency(currency);
+      setBaseValue(0);
+      setInvalidCurrency(null);
+      return;
+    }
+
+    try {
+      const result = /[+\-*/()]/.test(normalizedValue)
+        ? calculate(normalizedValue)
+        : Number(normalizedValue);
+
+      if (!Number.isFinite(result)) throw new Error('Invalid amount');
+
+      setBaseCurrency(currency);
+      setBaseValue(result);
+      setInputValues((current) => ({
+        ...current,
+        [currency]: String(result),
+      }));
+      setInvalidCurrency(null);
+      markUpdated(currency);
+    } catch {
+      setInvalidCurrency(currency);
+    }
+  };
+
+  const handleAmountChange = (currency: string, value: string) => {
+    setInputValues((current) => ({ ...current, [currency]: value }));
+    setInvalidCurrency(null);
+
+    const normalizedValue = normalizeAmount(value);
+    if (!normalizedValue) {
+      setBaseCurrency(currency);
+      setBaseValue(0);
+      return;
+    }
+
+    if (/^-?(?:\d+\.?\d*|\.\d+)$/.test(normalizedValue)) {
+      const nextValue = Number(normalizedValue);
+      if (Number.isFinite(nextValue)) {
+        setBaseCurrency(currency);
+        setBaseValue(nextValue);
+      }
+    }
   };
 
   const handlePresetClick = (amount: number) => {
     setBaseValue(amount);
-    setUpdatedCurrency('all');
-    // Update all input values to reflect the new base value
-    const newInputValues: Record<string, string> = {};
-    currenciesList.forEach((currency) => {
-      newInputValues[currency] = convertCurrency(amount, currency);
-    });
-    setInputValues(newInputValues);
-    if (updateTimeoutRef.current) {
-      window.clearTimeout(updateTimeoutRef.current);
-    }
-    updateTimeoutRef.current = window.setTimeout(() => setUpdatedCurrency(null), 450);
+    setInputValues((current) => ({
+      ...current,
+      [baseCurrency]: String(amount),
+    }));
+    markUpdated('all');
   };
 
   const moveCurrency = (currency: string, direction: -1 | 1) => {
@@ -116,8 +146,12 @@ const CurrencyListOutput = () => {
     if (currentIndex < 0 || nextIndex < 0 || nextIndex >= currenciesList.length) {
       return;
     }
+
     const nextList = [...currenciesList];
-    [nextList[currentIndex], nextList[nextIndex]] = [nextList[nextIndex], nextList[currentIndex]];
+    [nextList[currentIndex], nextList[nextIndex]] = [
+      nextList[nextIndex],
+      nextList[currentIndex],
+    ];
     setCurrenciesList(nextList);
   };
 
@@ -126,174 +160,272 @@ const CurrencyListOutput = () => {
       setDraggedCurrency(null);
       return;
     }
-    const nextList = currenciesList.filter((currency) => currency !== draggedCurrency);
+
+    const nextList = currenciesList.filter(
+      (currency) => currency !== draggedCurrency
+    );
     const targetIndex = nextList.indexOf(targetCurrency);
     nextList.splice(targetIndex, 0, draggedCurrency);
     setCurrenciesList(nextList);
     setDraggedCurrency(null);
   };
 
+  const removeCurrency = (currency: string) => {
+    if (currenciesList.length <= 1) return;
+
+    const nextList = currenciesList.filter((item) => item !== currency);
+    if (baseCurrency === currency) {
+      const nextBase = nextList[0];
+      const nextValue = convertCurrencyValue(baseValue, nextBase);
+      if (nextValue === null) return;
+      setBaseCurrency(nextBase);
+      setBaseValue(nextValue);
+    }
+
+    setCurrenciesList(nextList);
+    setInputValues((current) => {
+      const nextValues = { ...current };
+      delete nextValues[currency];
+      return nextValues;
+    });
+  };
+
+  const rateStatusLabel = (() => {
+    if (rateStatus === 'loading') return 'Updating rates…';
+    if (rateStatus === 'error') return 'Rates unavailable';
+    if (rateStatus === 'offline') return 'Offline rates';
+    if (!lastFetchTime) return 'Rates ready';
+    return `Updated ${new Date(lastFetchTime).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+    })}`;
+  })();
+
   return (
-    <div className="flex flex-col">
-      {/* Preset Buttons */}
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div className="flex min-w-0 overflow-x-auto rounded-lg bg-muted p-1" aria-label="Preset amounts">
-          {PRESETS.map((amount) => {
-            const isActive = baseValue === amount;
-            return (
-              <button
-                key={amount}
-                type="button"
-                onClick={() => handlePresetClick(amount)}
-                className={`min-h-9 shrink-0 rounded-md px-2.5 text-xs font-semibold tabular-nums transition-all ${
-                  isActive
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-                aria-pressed={isActive}
-              >
-                {amount.toLocaleString()}
-              </button>
-            );
-          })}
-        </div>
-        {lastFetchTime ? (
-          <span className="hidden shrink-0 text-[11px] text-muted-foreground sm:block">
-            Rates · {new Date(lastFetchTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+    <div>
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-border pb-4">
+        <div className="flex min-w-0 items-center gap-2">
+          <span
+            className={cn(
+              'h-1.5 w-1.5 rounded-full',
+              rateStatus === 'error'
+                ? 'bg-destructive'
+                : rateStatus === 'loading'
+                  ? 'animate-pulse bg-primary'
+                  : rateStatus === 'offline'
+                    ? 'bg-amber-500'
+                    : 'bg-emerald-500'
+            )}
+            aria-hidden="true"
+          />
+          <span className="text-xs text-muted-foreground" aria-live="polite">
+            {rateStatusLabel}
           </span>
-        ) : null}
+          {rateStatus === 'error' || rateStatus === 'offline' ? (
+            <button
+              type="button"
+              onClick={() => void refreshRates()}
+              className="inline-flex h-8 items-center gap-1.5 rounded-full px-2 text-xs font-semibold text-primary transition-colors hover:bg-accent"
+            >
+              <RefreshCw className="h-3 w-3" />
+              Retry
+            </button>
+          ) : null}
+        </div>
+
+        <div className="flex items-center gap-1" aria-label="Quick amounts">
+          <span className="mr-1 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+            Quick
+          </span>
+          {PRESETS.map((amount) => (
+            <button
+              key={amount}
+              type="button"
+              onClick={() => handlePresetClick(amount)}
+              className={cn(
+                'numeric min-h-10 rounded-full px-2.5 text-[11px] font-semibold transition-colors',
+                baseValue === amount
+                  ? 'bg-foreground text-background'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              )}
+              aria-pressed={baseValue === amount}
+            >
+              {amount === 1000 ? '1k' : amount}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {currenciesList.map((currency) => (
-        <div
-          key={currency}
-          draggable
-          onDragStart={() => setDraggedCurrency(currency)}
-          onDragEnd={() => setDraggedCurrency(null)}
-          onDragOver={(event) => event.preventDefault()}
-          onDrop={() => reorderCurrency(currency)}
-          className={`row-enter group relative flex items-center gap-2 border-b border-border/60 py-3 pl-2 pr-0 transition-all ${
-            baseCurrency === currency
-              ? 'bg-accent/40 before:absolute before:inset-y-3 before:left-0 before:w-0.5 before:rounded-full before:bg-primary'
-              : 'hover:bg-muted/35'
-          } ${draggedCurrency === currency ? 'opacity-40' : ''}`}
-        >
-          <button
-            type="button"
-            className="hidden min-h-11 w-7 shrink-0 cursor-grab items-center justify-center text-muted-foreground/50 hover:text-muted-foreground active:cursor-grabbing sm:flex"
-            aria-label={`Drag to reorder ${currency}`}
-          >
-            <GripVertical className="h-4 w-4" />
-          </button>
-          <div className="w-12 shrink-0 self-start pt-2.5">
-            <span className="block text-sm font-semibold">{currency}</span>
-            {baseCurrency === currency ? (
-              <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-wider text-primary">
-                Base
-              </span>
-            ) : null}
-          </div>
-          <div className="flex-1">
-            <div className="relative">
-              <Input
-                ref={(el) => {
-                  inputRefs.current[currency] = el;
-                }}
-                id={currency}
-                className={`border-transparent bg-transparent pr-11 text-lg font-medium tabular-nums shadow-none hover:border-input focus-visible:bg-background ${
-                  updatedCurrency === currency || (updatedCurrency === 'all' && baseCurrency !== currency)
-                    ? 'value-updated'
-                    : ''
-                }`}
-                value={inputValues[currency] ?? convertCurrency(baseValue, currency)}
-                autoComplete="off"
-                onChange={(e) => {
-                  setBaseCurrency(currency);
-                  setInputValues((prev) => ({
-                    ...prev,
-                    [currency]: e.target.value,
-                  }));
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    evaluateExpression(currency);
-                    (e.target as HTMLInputElement).blur();
-                  }
-                }}
-                onBlur={() => {
-                  evaluateExpression(currency);
-                }}
-                placeholder="0 or e.g. 100*3"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  setBaseCurrency(currency);
-                  setBaseValue(0);
-                  setInputValues((prev) => ({
-                    ...prev,
-                    [currency]: '',
-                  }));
-                }}
-                className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                aria-label={`Clear ${currency} value`}
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <HistoricalRateSparkline baseCurrency={baseCurrency} currency={currency} />
-          </div>
+      <div className="border-b border-border">
+        {currenciesList.map((currency) => {
+          const isBase = baseCurrency === currency;
+          const currencyIndex = currenciesList.indexOf(currency);
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          return (
+            <div
+              key={currency}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={() => reorderCurrency(currency)}
+              className={cn(
+                'row-enter group relative grid min-h-[96px] grid-cols-[minmax(84px,0.7fr)_minmax(0,1.3fr)_44px] items-center gap-2 border-t border-border/80 py-4 transition-[background-color,opacity] first:border-t-0 sm:grid-cols-[28px_minmax(128px,0.7fr)_minmax(0,1.3fr)_44px]',
+                isBase && 'bg-accent/45',
+                draggedCurrency === currency && 'opacity-35'
+              )}
+            >
+              {isBase ? (
+                <span className="absolute inset-y-4 left-0 w-0.5 rounded-full bg-primary" />
+              ) : null}
+
               <button
                 type="button"
-                className="flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                aria-label={`Open ${currency} actions`}
-              >
-                <MoreHorizontal className="h-4 w-4" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => moveCurrency(currency, -1)}
-                disabled={currenciesList.indexOf(currency) === 0}
-              >
-                <ChevronUp className="mr-2 h-4 w-4" />
-                Move up
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => moveCurrency(currency, 1)}
-                disabled={currenciesList.indexOf(currency) === currenciesList.length - 1}
-              >
-                <ChevronDown className="mr-2 h-4 w-4" />
-                Move down
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  const updatedList = currenciesList.filter(
-                    (c) => c !== currency
-                  );
-                  setCurrenciesList(updatedList);
-                  if (baseCurrency === currency) {
-                    setBaseCurrency(updatedList[0] || 'USD');
-                  }
-                  // Remove from input values
-                  setInputValues((prev) => {
-                    const newValues = { ...prev };
-                    delete newValues[currency];
-                    return newValues;
-                  });
+                draggable
+                onDragStart={(event) => {
+                  event.dataTransfer.effectAllowed = 'move';
+                  setDraggedCurrency(currency);
                 }}
-                className="text-red-600 focus:text-red-600"
+                onDragEnd={() => setDraggedCurrency(null)}
+                className="hidden h-10 w-7 cursor-grab items-center justify-center text-muted-foreground/50 transition-colors hover:text-foreground active:cursor-grabbing sm:flex"
+                aria-label={`Drag to reorder ${currency}`}
               >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      ))}
+                <GripVertical className="h-4 w-4" />
+              </button>
+
+              <div className="min-w-0 pl-3 sm:pl-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold tracking-[0.04em]">
+                    {currency}
+                  </span>
+                  {isBase ? (
+                    <span className="rounded-full bg-primary px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-primary-foreground">
+                      Base
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-1 truncate text-xs text-muted-foreground">
+                  {formatCurrencyName(currency)}
+                </p>
+              </div>
+
+              <div className="min-w-0 text-right">
+                <div className="relative">
+                  <label className="sr-only" htmlFor={`amount-${currency}`}>
+                    Amount in {formatCurrencyName(currency)}
+                  </label>
+                  <input
+                    ref={(element) => {
+                      inputRefs.current[currency] = element;
+                    }}
+                    id={`amount-${currency}`}
+                    className={cn(
+                      'numeric h-12 w-full rounded-lg border border-transparent bg-transparent pl-2 pr-9 text-right text-xl font-semibold outline-none transition-[border-color,background-color] placeholder:text-muted-foreground/50 hover:border-input focus:border-primary focus:bg-background sm:text-2xl',
+                      (updatedCurrency === currency ||
+                        (updatedCurrency === 'all' && !isBase)) &&
+                        'value-updated',
+                      invalidCurrency === currency && 'border-destructive'
+                    )}
+                    value={
+                      inputValues[currency] ??
+                      convertCurrency(baseValue, currency)
+                    }
+                    inputMode="decimal"
+                    autoComplete="off"
+                    onChange={(event) =>
+                      handleAmountChange(currency, event.target.value)
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        evaluateExpression(currency);
+                        event.currentTarget.blur();
+                      }
+                      if (event.key === 'Escape') {
+                        skipBlurEvaluationRef.current = currency;
+                        setInputValues((current) => ({
+                          ...current,
+                          [currency]: convertCurrency(baseValue, currency),
+                        }));
+                        setInvalidCurrency(null);
+                        event.currentTarget.blur();
+                      }
+                    }}
+                    onBlur={() => {
+                      if (skipBlurEvaluationRef.current === currency) {
+                        skipBlurEvaluationRef.current = null;
+                        return;
+                      }
+                      evaluateExpression(currency);
+                    }}
+                    placeholder={rateStatus === 'loading' ? '…' : '—'}
+                    aria-invalid={invalidCurrency === currency}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBaseCurrency(currency);
+                      setBaseValue(0);
+                      setInputValues((current) => ({
+                        ...current,
+                        [currency]: '',
+                      }));
+                      inputRefs.current[currency]?.focus();
+                    }}
+                    className="absolute right-0 top-1/2 flex h-10 w-9 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground opacity-60 transition-[opacity,color] hover:text-foreground group-focus-within:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                    aria-label={`Clear ${currency} amount`}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                {invalidCurrency === currency ? (
+                  <p className="mt-1 text-[11px] font-medium text-destructive" role="alert">
+                    Check this amount or calculation
+                  </p>
+                ) : (
+                  <HistoricalRateSparkline
+                    key={`${baseCurrency}-${currency}`}
+                    baseCurrency={baseCurrency}
+                    currency={currency}
+                  />
+                )}
+              </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    aria-label={`Open ${currency} actions`}
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => moveCurrency(currency, -1)}
+                    disabled={currencyIndex === 0}
+                  >
+                    <ChevronUp className="mr-2 h-4 w-4" />
+                    Move up
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => moveCurrency(currency, 1)}
+                    disabled={currencyIndex === currenciesList.length - 1}
+                  >
+                    <ChevronDown className="mr-2 h-4 w-4" />
+                    Move down
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => removeCurrency(currency)}
+                    disabled={currenciesList.length <= 1}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Remove
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };

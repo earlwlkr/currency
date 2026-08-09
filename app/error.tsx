@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
+import { useEffect } from 'react';
 
 export default function GlobalError({
   error,
@@ -15,15 +15,16 @@ export default function GlobalError({
 
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
-      <div className="w-full max-w-md rounded-xl border p-6 text-center shadow-sm">
-        <h1 className="text-lg font-semibold">Something went wrong</h1>
+      <div className="w-full max-w-md border-y border-border py-10 text-center">
+        <p className="section-index">Current / Error</p>
+        <h1 className="mt-4 text-2xl font-semibold tracking-tight">Something went wrong</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           A runtime error occurred. You can retry without reloading the whole app.
         </p>
         <button
           type="button"
           onClick={() => reset()}
-          className="mt-4 inline-flex items-center rounded-md border px-4 py-2 text-sm font-medium"
+          className="mt-6 inline-flex h-10 items-center rounded-full bg-foreground px-5 text-sm font-semibold text-background transition-opacity hover:opacity-80"
         >
           Try again
         </button>

@@ -1,13 +1,19 @@
 {
-  "theme_color": "#bdac9b",
-  "background_color": "#ffffff",
+  "theme_color": "#2f6bff",
+  "background_color": "#f7f5ef",
   "display": "standalone",
   "scope": "/",
   "start_url": "/",
-  "name": "Currency & Time Converter",
-  "short_name": "Currency",
+  "name": "Current — Currency & Time",
+  "short_name": "Current",
   "description": "Quick converter for checking money amounts and time differences in one simple screen.",
   "icons": [
+    {
+      "src": "/icons/current.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
     {
       "src": "/icons/icon-192x192.png",
       "sizes": "192x192",

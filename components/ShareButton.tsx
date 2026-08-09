@@ -1,16 +1,21 @@
 'use client';
 
 import { useState } from 'react';
-import { Link2, Check } from 'lucide-react';
+import { Check, Link2 } from 'lucide-react';
 import { useAtom } from 'jotai';
 
 import { useCurrencyContext } from '@/lib/CurrencyContext';
-import { timezoneListAtom } from '@/lib/timezoneAtoms';
+import { comparisonTimeAtom, timezoneListAtom } from '@/lib/timezoneAtoms';
 import { generateShareableUrl } from '@/lib/urlParams';
 
-export function ShareButton() {
-  const { baseValue, currenciesList } = useCurrencyContext();
+interface ShareButtonProps {
+  workspace: 'currency' | 'time';
+}
+
+export function ShareButton({ workspace }: ShareButtonProps) {
+  const { baseCurrency, baseValue, currenciesList } = useCurrencyContext();
   const [timezoneList] = useAtom(timezoneListAtom);
+  const [comparisonTime] = useAtom(comparisonTimeAtom);
   const [status, setStatus] = useState<'idle' | 'shared' | 'copied' | 'failed'>('idle');
 
   const resetStatus = () => {
@@ -20,8 +25,11 @@ export function ShareButton() {
   const handleShare = async () => {
     const url = generateShareableUrl({
       value: baseValue,
+      baseCurrency,
       currencies: currenciesList,
       timezones: timezoneList,
+      comparisonTime,
+      workspace,
     });
 
     try {
@@ -58,24 +66,25 @@ export function ShareButton() {
     <button
       type="button"
       onClick={handleShare}
-      className="flex min-h-11 items-center gap-2 rounded-lg border border-border bg-background px-3 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+      className="flex h-10 shrink-0 items-center gap-2 rounded-full border border-border/80 px-3 text-xs font-semibold text-foreground transition-colors hover:border-foreground/30 hover:bg-muted sm:px-4"
       title="Share this setup"
+      aria-label="Share current setup"
       aria-live="polite"
     >
       {status === 'copied' || status === 'shared' ? (
         <>
           <Check className="h-3.5 w-3.5" />
-          {status === 'shared' ? 'Shared' : 'Copied'}
+          <span className="hidden sm:inline">{status === 'shared' ? 'Shared' : 'Copied'}</span>
         </>
       ) : status === 'failed' ? (
         <>
           <Link2 className="h-3.5 w-3.5" />
-          Copy failed
+          <span className="hidden sm:inline">Copy failed</span>
         </>
       ) : (
         <>
           <Link2 className="h-3.5 w-3.5" />
-          Share
+          <span className="hidden sm:inline">Share</span>
         </>
       )}
     </button>

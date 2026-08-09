@@ -7,15 +7,15 @@ import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 
 export const metadata: Metadata = {
-  title: 'Currency & Time Converter',
+  title: 'Current — Currency & Time',
   description: 'Quick converter for checking money amounts and time differences in one simple screen.',
   generator: 'Next.js',
   manifest: '/manifest.json',
   keywords: ['nextjs', 'pwa', 'next-pwa', 'currency', 'currencies'],
   authors: [{ name: 'earlwlkr' }],
   icons: [
-    { rel: 'apple-touch-icon', url: 'icons/icon-192x192.png' },
-    { rel: 'icon', url: 'icons/icon-192x192.png' },
+    { rel: 'icon', url: '/icons/current.svg', type: 'image/svg+xml' },
+    { rel: 'apple-touch-icon', url: '/icons/icon-192x192.png' },
   ],
 };
 
@@ -25,8 +25,8 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
   userScalable: true,
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#0c0c0f' },
+    { media: '(prefers-color-scheme: light)', color: '#f7f5ef' },
+    { media: '(prefers-color-scheme: dark)', color: '#161612' },
   ],
 };
 
@@ -40,7 +40,7 @@ export default function RootLayout({
       <body>
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
+          defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >

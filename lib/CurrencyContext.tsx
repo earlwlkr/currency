@@ -1,19 +1,27 @@
-import React, {
+'use client';
+
+import {
   createContext,
-  useState,
-  useContext,
-  ReactNode,
-  useEffect,
   useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
 } from 'react';
 import { get as getIdb, set } from 'idb-keyval';
-import { getUrlParams, clearUrlParams } from '@/lib/urlParams';
 
-// Half a day in milliseconds
+import { clearUrlParams, getUrlParams } from '@/lib/urlParams';
+
 const HALF_DAY = 12 * 60 * 60 * 1000;
 const CURRENCY_CODE_REGEX = /^[A-Z]{3}$/;
 
-type CurrencyContextType = {
+interface CurrencyRates {
+  usd: Record<string, number>;
+}
+
+type RateStatus = 'loading' | 'ready' | 'offline' | 'error';
+
+interface CurrencyContextType {
   baseValue: number;
   setBaseValue: (value: number) => void;
   baseCurrency: string;
@@ -21,98 +29,137 @@ type CurrencyContextType = {
   currenciesList: string[];
   setCurrenciesList: (list: string[]) => void;
   convertCurrency: (amount: number, toCurrency: string) => string;
+  convertCurrencyValue: (amount: number, toCurrency: string) => number | null;
   lastFetchTime: number | null;
-};
+  rateStatus: RateStatus;
+  refreshRates: () => Promise<void>;
+}
+
+interface CurrencyRatesResult {
+  rates: CurrencyRates;
+  lastFetchTime: number | null;
+  source: 'cache' | 'network' | 'none';
+}
 
 const CurrencyContext = createContext<CurrencyContextType | undefined>(
   undefined
 );
 
-export const fetchCurrencyRates = async () => {
-  if (typeof indexedDB === 'undefined') {
-    return { rates: {}, lastFetchTime: null };
-  }
-  const lastFetchCurrencyRates = (await getIdb<number>('lastFetchCurrencyRates')) || 0;
-  const storageData = await getIdb<string>('currencyRates');
-  let cachedRates: { usd?: Record<string, number> } = {};
-  try {
-    cachedRates = JSON.parse(storageData || '{}');
-  } catch {
-    cachedRates = {};
+const hasRates = (rates: Partial<CurrencyRates>): rates is CurrencyRates =>
+  Boolean(
+    rates.usd &&
+      typeof rates.usd === 'object' &&
+      Object.values(rates.usd).some((rate) => Number.isFinite(rate))
+  );
+
+export const fetchCurrencyRates = async (
+  forceRefresh = false
+): Promise<CurrencyRatesResult> => {
+  const canPersist = typeof indexedDB !== 'undefined';
+  let lastFetchCurrencyRates = 0;
+  let cachedRates: Partial<CurrencyRates> = {};
+
+  if (canPersist) {
+    try {
+      lastFetchCurrencyRates =
+        (await getIdb<number>('lastFetchCurrencyRates')) || 0;
+      const storageData = await getIdb<string>('currencyRates');
+      cachedRates = JSON.parse(storageData || '{}') as Partial<CurrencyRates>;
+    } catch {
+      cachedRates = {};
+    }
   }
 
-  if (Date.now() - lastFetchCurrencyRates < HALF_DAY && Object.keys(cachedRates).length > 0) {
+  if (
+    !forceRefresh &&
+    Date.now() - lastFetchCurrencyRates < HALF_DAY &&
+    hasRates(cachedRates)
+  ) {
     return {
       rates: cachedRates,
       lastFetchTime: lastFetchCurrencyRates,
+      source: 'cache',
     };
   }
 
   try {
-    // Fetch fresh rates when cache is stale.
     const response = await fetch(
       'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json'
     );
     if (!response.ok) {
       throw new Error(`Failed to fetch rates: ${response.status}`);
     }
-    const currencyRates = await response.json();
-    if (!currencyRates || typeof currencyRates !== 'object' || !('usd' in currencyRates)) {
+
+    const payload = (await response.json()) as Partial<CurrencyRates>;
+    if (!hasRates(payload)) {
       throw new Error('Invalid rates payload');
     }
+
     const now = Date.now();
-    await set('lastFetchCurrencyRates', now);
-    await set('currencyRates', JSON.stringify(currencyRates));
-    return { rates: currencyRates, lastFetchTime: now };
+    if (canPersist) {
+      try {
+        await Promise.all([
+          set('lastFetchCurrencyRates', now),
+          set('currencyRates', JSON.stringify(payload)),
+        ]);
+      } catch {
+        // A valid network response should remain usable if persistence is blocked.
+      }
+    }
+
+    return { rates: payload, lastFetchTime: now, source: 'network' };
   } catch {
-    // Keep the app usable offline/when API is unavailable.
-    return {
-      rates: cachedRates,
-      lastFetchTime: lastFetchCurrencyRates || null,
-    };
+    if (hasRates(cachedRates)) {
+      return {
+        rates: cachedRates,
+        lastFetchTime: lastFetchCurrencyRates || null,
+        source: 'cache',
+      };
+    }
+
+    return { rates: { usd: {} }, lastFetchTime: null, source: 'none' };
   }
 };
 
-const formatter = Intl.NumberFormat('en-US');
+const standardFormatter = new Intl.NumberFormat('en-US', {
+  maximumFractionDigits: 4,
+});
+const smallValueFormatter = new Intl.NumberFormat('en-US', {
+  maximumSignificantDigits: 6,
+});
 
 const getStoredBaseValue = (): number => {
-  if (typeof window === 'undefined') {
+  if (typeof window === 'undefined') return 100;
+  try {
+    const storedValue = localStorage.getItem('baseValue');
+    if (!storedValue) return 100;
+    const parsedValue = Number(storedValue);
+    return Number.isFinite(parsedValue) ? parsedValue : 100;
+  } catch {
     return 100;
   }
-  const storedValue = localStorage.getItem('baseValue');
-  if (!storedValue) {
-    return 100;
-  }
-  const parsedValue = Number(storedValue);
-  return Number.isFinite(parsedValue) ? parsedValue : 100;
 };
 
 const getStoredBaseCurrency = (): string => {
-  if (typeof window === 'undefined') {
+  if (typeof window === 'undefined') return 'USD';
+  try {
+    const normalized = (localStorage.getItem('baseCurrency') || 'USD')
+      .trim()
+      .toUpperCase();
+    return CURRENCY_CODE_REGEX.test(normalized) ? normalized : 'USD';
+  } catch {
     return 'USD';
   }
-  const storedBaseCurrency = localStorage.getItem('baseCurrency');
-  if (!storedBaseCurrency) {
-    return 'USD';
-  }
-  const normalized = storedBaseCurrency.trim().toUpperCase();
-  return CURRENCY_CODE_REGEX.test(normalized) ? normalized : 'USD';
 };
 
 const getStoredCurrenciesList = (): string[] => {
-  if (typeof window === 'undefined') {
-    return ['USD', 'VND'];
-  }
-  const storedList = localStorage.getItem('currenciesList');
-  if (!storedList) {
-    return ['USD', 'VND'];
-  }
-
+  if (typeof window === 'undefined') return ['USD', 'VND'];
   try {
-    const parsedList = JSON.parse(storedList);
-    if (!Array.isArray(parsedList)) {
-      return ['USD', 'VND'];
-    }
+    const storedList = localStorage.getItem('currenciesList');
+    if (!storedList) return ['USD', 'VND'];
+    const parsedList = JSON.parse(storedList) as unknown;
+    if (!Array.isArray(parsedList)) return ['USD', 'VND'];
+
     const normalizedList = Array.from(
       new Set(
         parsedList
@@ -129,88 +176,112 @@ const getStoredCurrenciesList = (): string[] => {
 
 export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
   const urlParams = getUrlParams();
+  const storedBaseCurrency = getStoredBaseCurrency();
+  const initialCurrencies =
+    urlParams?.currencies && urlParams.currencies.length > 0
+      ? urlParams.currencies
+      : getStoredCurrenciesList();
+  const initialBaseCurrency =
+    urlParams?.baseCurrency && initialCurrencies.includes(urlParams.baseCurrency)
+      ? urlParams.baseCurrency
+      : initialCurrencies.includes(storedBaseCurrency)
+        ? storedBaseCurrency
+        : initialCurrencies[0] || 'USD';
 
-  const [baseValue, setBaseValue] = useState<number>(() => {
-    if (urlParams?.value !== undefined) {
-      return urlParams.value;
-    }
-    return getStoredBaseValue();
-  });
-
-  const [baseCurrency, setBaseCurrency] = useState<string>(
-    () => getStoredBaseCurrency()
+  const [baseValue, setBaseValue] = useState<number>(
+    urlParams?.value ?? getStoredBaseValue()
   );
-
-  const [currenciesList, setCurrenciesList] = useState<string[]>(() => {
-    if (urlParams?.currencies && urlParams.currencies.length > 0) {
-      return urlParams.currencies;
-    }
-    return getStoredCurrenciesList();
+  const [baseCurrency, setBaseCurrency] = useState(initialBaseCurrency);
+  const [currenciesList, setCurrenciesList] = useState(initialCurrencies);
+  const [currenciesRates, setCurrenciesRates] = useState<CurrencyRates>({
+    usd: {},
   });
-
-  const [currenciesRates, setCurrenciesRates] = useState<{
-    usd: Record<string, number>;
-  }>({ usd: {} });
-
   const [lastFetchTime, setLastFetchTime] = useState<number | null>(null);
+  const [rateStatus, setRateStatus] = useState<RateStatus>('loading');
 
-  const convertCurrency = useCallback(
-    (amount: number, toCurrency: string) => {
-      if (baseCurrency === toCurrency) {
-        return String(amount);
-      }
-      if (!currenciesRates || Object.keys(currenciesRates).length === 0) {
-        return '';
-      }
+  const loadRates = useCallback(async (forceRefresh = false) => {
+    setRateStatus('loading');
+    const result = await fetchCurrencyRates(forceRefresh);
+    setCurrenciesRates(result.rates);
+    setLastFetchTime(result.lastFetchTime);
+
+    if (!hasRates(result.rates)) {
+      setRateStatus('error');
+      return;
+    }
+
+    const isStale =
+      result.lastFetchTime === null ||
+      Date.now() - result.lastFetchTime >= HALF_DAY;
+    setRateStatus(result.source === 'cache' && isStale ? 'offline' : 'ready');
+  }, []);
+
+  const refreshRates = useCallback(async () => {
+    await loadRates(true);
+  }, [loadRates]);
+
+  const convertCurrencyValue = useCallback(
+    (amount: number, toCurrency: string): number | null => {
+      if (baseCurrency === toCurrency) return amount;
 
       const targetRate = currenciesRates.usd[toCurrency.toLowerCase()];
-      if (!targetRate || !Number.isFinite(targetRate)) {
-        return '';
-      }
+      if (!Number.isFinite(targetRate)) return null;
 
-      const usdAmount = amount * targetRate;
-      if (baseCurrency !== 'USD') {
-        const baseRate = currenciesRates.usd[baseCurrency.toLowerCase()];
-        if (!baseRate || !Number.isFinite(baseRate)) {
-          return '';
-        }
-        return formatter.format(
-          usdAmount / baseRate
-        );
-      }
-      return formatter.format(usdAmount);
+      if (baseCurrency === 'USD') return amount * targetRate;
+
+      const baseRate = currenciesRates.usd[baseCurrency.toLowerCase()];
+      if (!Number.isFinite(baseRate) || baseRate === 0) return null;
+      return (amount * targetRate) / baseRate;
     },
     [baseCurrency, currenciesRates]
   );
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const result = await fetchCurrencyRates();
-      if (result) {
-        setCurrenciesRates(result.rates);
-        setLastFetchTime(result.lastFetchTime);
-      }
-    };
-    fetchData();
-  }, []);
+  const convertCurrency = useCallback(
+    (amount: number, toCurrency: string) => {
+      const converted = convertCurrencyValue(amount, toCurrency);
+      if (converted === null) return '';
+      if (baseCurrency === toCurrency) return String(amount);
+      return Math.abs(converted) > 0 && Math.abs(converted) < 0.01
+        ? smallValueFormatter.format(converted)
+        : standardFormatter.format(converted);
+    },
+    [baseCurrency, convertCurrencyValue]
+  );
 
   useEffect(() => {
-    localStorage.setItem('baseValue', baseValue.toString());
+    const timeout = window.setTimeout(() => void loadRates(), 0);
+    return () => window.clearTimeout(timeout);
+  }, [loadRates]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('baseValue', baseValue.toString());
+    } catch {
+      // Conversion remains usable when storage is unavailable.
+    }
   }, [baseValue]);
 
   useEffect(() => {
-    localStorage.setItem('baseCurrency', baseCurrency);
+    try {
+      localStorage.setItem('baseCurrency', baseCurrency);
+    } catch {
+      // Conversion remains usable when storage is unavailable.
+    }
   }, [baseCurrency]);
 
   useEffect(() => {
-    localStorage.setItem('currenciesList', JSON.stringify(currenciesList));
+    try {
+      localStorage.setItem('currenciesList', JSON.stringify(currenciesList));
+    } catch {
+      // Conversion remains usable when storage is unavailable.
+    }
   }, [currenciesList]);
 
-  // Clear URL params after reading them to keep the URL clean
   useEffect(() => {
-    if (urlParams) {
-      clearUrlParams();
-    }
+    if (!urlParams) return;
+    const timeout = window.setTimeout(clearUrlParams, 0);
+    return () => window.clearTimeout(timeout);
+    // URL state is intentionally read once during provider initialization.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -224,7 +295,10 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
         currenciesList,
         setCurrenciesList,
         convertCurrency,
+        convertCurrencyValue,
         lastFetchTime,
+        rateStatus,
+        refreshRates,
       }}
     >
       {children}
@@ -235,9 +309,7 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
 export const useCurrencyContext = () => {
   const context = useContext(CurrencyContext);
   if (!context) {
-    throw new Error(
-      'useCurrencyContext must be used within a CurrencyProvider'
-    );
+    throw new Error('useCurrencyContext must be used within a CurrencyProvider');
   }
   return context;
 };

@@ -1,52 +1,43 @@
 'use client';
 
-import Downshift, { DownshiftState, StateChangeOptions } from 'downshift';
+import Downshift, {
+  type DownshiftState,
+  type StateChangeOptions,
+} from 'downshift';
 import { useAtom } from 'jotai';
-import { Plus, X } from 'lucide-react';
+import { Plus, Search, X } from 'lucide-react';
 
-import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
 import { timezoneListAtom } from '@/lib/timezoneAtoms';
+import {
+  searchTimezones,
+  type SearchResult,
+} from '@/lib/timezoneUtils';
+import { cn } from '@/lib/utils';
 
 function stateReducer(
-  state: DownshiftState<any>,
-  changes: StateChangeOptions<any>
+  _state: DownshiftState<SearchResult>,
+  changes: StateChangeOptions<SearchResult>
 ) {
-  // this prevents the menu from being closed when the user
-  // selects an item with a keyboard or mouse
   switch (changes.type) {
     case Downshift.stateChangeTypes.keyDownEnter:
     case Downshift.stateChangeTypes.clickItem:
-      return {
-        ...changes,
-        inputValue: '',
-      };
+      return { ...changes, inputValue: '', isOpen: false };
     default:
       return changes;
   }
-}
-
-import { searchTimezones } from '@/lib/timezoneUtils';
-
-function getMatchingItems(inputValue: string) {
-  return searchTimezones(inputValue);
 }
 
 export const TimezoneInput = () => {
   const [timezoneList, setTimezoneList] = useAtom(timezoneListAtom);
 
   return (
-    <Downshift
+    <Downshift<SearchResult>
       onChange={(selection) => {
-        if (!selection) {
-          return;
-        }
-        if (!timezoneList.includes(selection.id)) {
-          setTimezoneList([...timezoneList, selection.id]);
-        }
+        if (!selection || timezoneList.includes(selection.id)) return;
+        setTimezoneList([...timezoneList, selection.id]);
       }}
-      itemToString={(item) => (item ? item.label : '')}
+      itemToString={(item) => item?.label ?? ''}
       stateReducer={stateReducer}
     >
       {({
@@ -56,33 +47,38 @@ export const TimezoneInput = () => {
         getItemProps,
         isOpen,
         inputValue,
-        clearSelection,
         highlightedIndex,
-        selectedItem,
         selectItemAtIndex,
         setState,
-      }) => (
-        <div className="relative">
-          <div
-            className="mt-3"
-            {...getRootProps({}, { suppressRefError: true })}
-          >
-            <div className="relative">
-              <Plus className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
-              <Input
-                placeholder="Add timezone"
-                className="border-dashed bg-transparent pl-9 pr-11 text-base hover:border-primary/50"
+      }) => {
+        const matchingItems = (inputValue ? searchTimezones(inputValue) : [])
+          .filter((item) => !timezoneList.includes(item.id))
+          .slice(0, 30);
+
+        return (
+          <div className="relative" {...getRootProps({}, { suppressRefError: true })}>
+            <div className="group flex min-h-16 items-center border-b border-border">
+              <span className="ml-3 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border text-muted-foreground transition-colors group-focus-within:border-primary group-focus-within:text-primary">
+                <Plus className="h-4 w-4" />
+              </span>
+              <label className="sr-only" htmlFor="timezone-search">
+                Search cities and timezones to add
+              </label>
+              <input
+                placeholder="Add a city or timezone"
+                className="h-16 min-w-0 flex-1 bg-transparent px-3 text-sm font-medium outline-none placeholder:text-muted-foreground"
                 {...getInputProps({
-                  onKeyDown: (e) => {
-                    if (inputValue) {
-                      if (['Enter', 'Tab'].includes(e.key) && !highlightedIndex) {
-                        e.preventDefault();
-                        const options = getMatchingItems(inputValue);
-                        if (options.length > 0) {
-                          selectItemAtIndex(0);
-                          clearSelection();
-                        }
-                      }
+                  id: 'timezone-search',
+                  'aria-label': 'Search cities and timezones to add',
+                  onKeyDown: (event) => {
+                    if (
+                      (event.key === 'Enter' || event.key === 'Tab') &&
+                      inputValue &&
+                      highlightedIndex === null &&
+                      matchingItems.length > 0
+                    ) {
+                      event.preventDefault();
+                      selectItemAtIndex(0);
                     }
                   },
                 })}
@@ -91,47 +87,59 @@ export const TimezoneInput = () => {
                 <button
                   type="button"
                   onClick={() => setState({ inputValue: '' })}
-                  className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                  aria-label="Clear timezone input"
+                  className="mr-1 flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  aria-label="Clear timezone search"
                 >
                   <X className="h-4 w-4" />
                 </button>
-              ) : null}
+              ) : (
+                <Search className="mr-4 h-4 w-4 text-muted-foreground/60" aria-hidden="true" />
+              )}
+            </div>
+
+            <div
+              {...getMenuProps()}
+              className={cn(
+                'absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-[0_18px_50px_rgba(20,20,16,0.16)]',
+                (!isOpen || !inputValue) && 'hidden'
+              )}
+            >
+              <ScrollArea
+                className="p-1.5"
+                style={{
+                  height: matchingItems.length
+                    ? Math.min(matchingItems.length * 48 + 12, 256)
+                    : 76,
+                }}
+              >
+                {matchingItems.length > 0 ? (
+                  matchingItems.map((item, index) => (
+                    <div
+                      key={`${item.id}-${item.label}`}
+                      className={cn(
+                        'flex cursor-default items-center justify-between gap-4 rounded-lg px-3 py-2.5 transition-colors',
+                        highlightedIndex === index && 'bg-accent text-accent-foreground'
+                      )}
+                      {...getItemProps({ index, item })}
+                    >
+                      <span className="min-w-0 truncate text-sm font-semibold">
+                        {item.label}
+                      </span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {item.sub}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+                    No new timezones found
+                  </p>
+                )}
+              </ScrollArea>
             </div>
           </div>
-
-          {isOpen && inputValue ? (
-            <ScrollArea
-              {...getMenuProps()}
-              className="mt-2 h-60 rounded-lg border bg-popover text-popover-foreground shadow-lg z-50 absolute w-full"
-            >
-              {getMatchingItems(inputValue).map((item, index) => (
-                <div
-                  key={`${item.id}-${index}`}
-                  className={cn(
-                    'px-2.5 py-1.5 mx-1 my-0.5 rounded-md cursor-default',
-                    highlightedIndex === index
-                      ? 'bg-accent text-accent-foreground'
-                      : '',
-                    selectedItem === item ? 'font-bold' : ''
-                  )}
-                  {...getItemProps({
-                    index,
-                    item,
-                  })}
-                >
-                  <div className="flex flex-col">
-                    <span className="font-medium text-sm">{item.label}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {item.sub}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </ScrollArea>
-          ) : null}
-        </div>
-      )}
+        );
+      }}
     </Downshift>
   );
 };
