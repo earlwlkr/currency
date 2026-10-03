@@ -207,7 +207,7 @@ export function formatTimezone(timezone: string, date = new Date()): {
 
         // Handle Etc/GMT cases
         if (timezone.startsWith('Etc/')) {
-            const main = offset === 'GMT' ? 'UTC' : offset.replace('GMT', 'UTC');
+            const main = offset === 'GMT' || offset === 'GMT+00:00' ? 'UTC' : offset.replace('GMT', 'UTC');
             const sub = 'Fixed offset';
             return { main, sub, alt: `${main} (${sub})`, abbreviation: main };
         }
