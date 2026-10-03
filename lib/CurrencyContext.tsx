@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { get as getIdb, set } from 'idb-keyval';
 
+import { formatAmount } from '@/lib/currencyUtils';
 import { clearUrlParams, getUrlParams } from '@/lib/urlParams';
 
 const HALF_DAY = 12 * 60 * 60 * 1000;
@@ -120,13 +121,6 @@ export const fetchCurrencyRates = async (
     return { rates: { usd: {} }, lastFetchTime: null, source: 'none' };
   }
 };
-
-const standardFormatter = new Intl.NumberFormat('en-US', {
-  maximumFractionDigits: 4,
-});
-const smallValueFormatter = new Intl.NumberFormat('en-US', {
-  maximumSignificantDigits: 6,
-});
 
 const getStoredBaseValue = (): number => {
   if (typeof window === 'undefined') return 100;
@@ -239,13 +233,9 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
   const convertCurrency = useCallback(
     (amount: number, toCurrency: string) => {
       const converted = convertCurrencyValue(amount, toCurrency);
-      if (converted === null) return '';
-      if (baseCurrency === toCurrency) return String(amount);
-      return Math.abs(converted) > 0 && Math.abs(converted) < 0.01
-        ? smallValueFormatter.format(converted)
-        : standardFormatter.format(converted);
+      return converted === null ? '' : formatAmount(converted, toCurrency);
     },
-    [baseCurrency, convertCurrencyValue]
+    [convertCurrencyValue]
   );
 
   useEffect(() => {

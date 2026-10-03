@@ -1,11 +1,10 @@
 'use client';
 
-import { useMemo } from 'react';
 import Downshift, {
   type DownshiftState,
   type StateChangeOptions,
 } from 'downshift';
-import { Plus, Search, X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import countryByCurrencyCode from '@/config/country-by-currency-code.json';
@@ -34,17 +33,15 @@ const currencyOptions: CurrencyOption[] = Array.from(
   }))
   .sort((a, b) => a.currency_code.localeCompare(b.currency_code));
 
+// Every selection (click, Enter, or the first-match shortcut) adds the item
+// and resets the search. Downshift keeps no selection of its own, so blurring
+// can't restore the last pick and the same item can be added again later.
 function stateReducer(
   _state: DownshiftState<CurrencyOption>,
   changes: StateChangeOptions<CurrencyOption>
 ) {
-  switch (changes.type) {
-    case Downshift.stateChangeTypes.keyDownEnter:
-    case Downshift.stateChangeTypes.clickItem:
-      return { ...changes, inputValue: '', isOpen: false };
-    default:
-      return changes;
-  }
+  if (!changes.selectedItem) return changes;
+  return { ...changes, selectedItem: null, inputValue: '', isOpen: false };
 }
 
 function getMatchingItems(
@@ -69,7 +66,7 @@ const CurrencyInput = () => {
 
   return (
     <Downshift<CurrencyOption>
-      onChange={(selection) => {
+      onSelect={(selection) => {
         if (!selection || currenciesList.includes(selection.currency_code)) {
           return;
         }
@@ -96,19 +93,20 @@ const CurrencyInput = () => {
 
         return (
           <div className="relative" {...getRootProps({}, { suppressRefError: true })}>
-            <div className="group flex min-h-16 items-center border-b border-border">
-              <span className="ml-3 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border text-muted-foreground transition-colors group-focus-within:border-primary group-focus-within:text-primary">
-                <Plus className="h-4 w-4" />
-              </span>
+            <div className="flex h-14 items-center gap-3 border-y border-border">
+              <Plus className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
               <label className="sr-only" htmlFor="currency-search">
                 Search currencies to add
               </label>
               <input
-                placeholder="Add a currency"
-                className="h-16 min-w-0 flex-1 bg-transparent px-3 text-sm font-medium outline-none placeholder:text-muted-foreground"
+                placeholder="Add currency"
+                className="h-full min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground focus-visible:outline-none"
                 {...getInputProps({
                   id: 'currency-search',
                   'aria-label': 'Search currencies to add',
+                  autoComplete: 'off',
+                  autoCapitalize: 'characters',
+                  spellCheck: false,
                   onKeyDown: (event) => {
                     if (
                       (event.key === 'Enter' || event.key === 'Tab') &&
@@ -126,29 +124,27 @@ const CurrencyInput = () => {
                 <button
                   type="button"
                   onClick={() => setState({ inputValue: '' })}
-                  className="mr-1 flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  className="-mr-2 flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
                   aria-label="Clear currency search"
                 >
                   <X className="h-4 w-4" />
                 </button>
-              ) : (
-                <Search className="mr-4 h-4 w-4 text-muted-foreground/60" aria-hidden="true" />
-              )}
+              ) : null}
             </div>
 
             <div
               {...getMenuProps()}
               className={cn(
-                'absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-[0_18px_50px_rgba(20,20,16,0.16)]',
+                'absolute left-0 right-0 top-[calc(100%+4px)] z-50 overflow-hidden rounded-lg border bg-popover text-popover-foreground shadow-lg',
                 (!isOpen || !inputValue) && 'hidden'
               )}
             >
               <ScrollArea
-                className="p-1.5"
+                className="p-1"
                 style={{
                   height: matchingItems.length
-                    ? Math.min(matchingItems.length * 40 + 12, 256)
-                    : 76,
+                    ? Math.min(matchingItems.length * 44 + 8, 272)
+                    : 52,
                 }}
               >
                 {matchingItems.length > 0 ? (
@@ -156,22 +152,22 @@ const CurrencyInput = () => {
                     <div
                       key={item.currency_code}
                       className={cn(
-                        'flex cursor-default items-center justify-between rounded-lg px-3 py-2.5 transition-colors',
+                        'flex h-11 cursor-default items-center gap-3 rounded-md px-3',
                         highlightedIndex === index && 'bg-accent text-accent-foreground'
                       )}
                       {...getItemProps({ index, item })}
                     >
-                      <span className="text-sm font-bold tracking-[0.04em]">
+                      <span className="w-10 shrink-0 text-[15px] font-semibold">
                         {item.currency_code}
                       </span>
-                      <span className="ml-4 truncate text-xs text-muted-foreground">
+                      <span className="truncate text-[13px] text-muted-foreground">
                         {item.name}
                       </span>
                     </div>
                   ))
                 ) : (
-                  <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-                    No new currencies found
+                  <p className="px-3 py-3 text-[13px] text-muted-foreground">
+                    No matching currencies
                   </p>
                 )}
               </ScrollArea>

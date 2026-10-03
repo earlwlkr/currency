@@ -1,25 +1,15 @@
 'use client';
 
-import { useEffect, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useAtom } from 'jotai';
-import {
-  ChevronDown,
-  ChevronUp,
-  MoreHorizontal,
-  RotateCcw,
-  Trash2,
-} from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
+import { RowActions } from '@/components/RowActions';
 import { TimezoneInput } from '@/components/TimezoneInput';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { getUrlParams } from '@/lib/urlParams';
 import { comparisonTimeAtom, timezoneListAtom } from '@/lib/timezoneAtoms';
 import { formatTimezone } from '@/lib/timezoneUtils';
+import { cn, selectAllOnFocus } from '@/lib/utils';
 
 const subscribeToClock = (onStoreChange: () => void) => {
   const interval = window.setInterval(onStoreChange, 30_000);
@@ -42,6 +32,8 @@ const formatTime = (date: Date, timezone: string) => {
   }
 };
 
+// Midnight (as a UTC timestamp) of the calendar day `date` falls on in
+// `timezone`, or in the local timezone when omitted.
 const getDateStamp = (date: Date, timezone?: string) => {
   const parts = new Intl.DateTimeFormat('en-US', {
     ...(timezone ? { timeZone: timezone } : {}),
@@ -54,9 +46,9 @@ const getDateStamp = (date: Date, timezone?: string) => {
   return Date.UTC(getPart('year'), getPart('month') - 1, getPart('day'));
 };
 
-const formatDayContext = (date: Date, timezone: string) => {
+const formatDayLabel = (date: Date, today: Date, timezone?: string) => {
   const dayDifference = Math.round(
-    (getDateStamp(date, timezone) - getDateStamp(date)) / 86_400_000
+    (getDateStamp(date, timezone) - getDateStamp(today)) / 86_400_000
   );
 
   if (dayDifference === -1) return 'Yesterday';
@@ -64,7 +56,8 @@ const formatDayContext = (date: Date, timezone: string) => {
   if (dayDifference === 1) return 'Tomorrow';
 
   return new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone,
+    ...(timezone ? { timeZone: timezone } : {}),
+    weekday: 'short',
     month: 'short',
     day: 'numeric',
   }).format(date);
@@ -88,23 +81,62 @@ const getOffsetMinutes = (date: Date, timezone: string) => {
 const formatRelativeOffset = (date: Date, timezone: string) => {
   const localOffset = -date.getTimezoneOffset();
   const difference = getOffsetMinutes(date, timezone) - localOffset;
-  if (difference === 0) return 'Local time';
+  if (difference === 0) return 'your time';
 
-  const sign = difference > 0 ? '+' : '−';
   const absoluteMinutes = Math.abs(difference);
   const hours = Math.floor(absoluteMinutes / 60);
   const minutes = absoluteMinutes % 60;
-  return `${sign}${hours}${minutes ? `:${String(minutes).padStart(2, '0')}` : ''}h`;
+  const amount = [hours ? `${hours}h` : '', minutes ? `${minutes}m` : '']
+    .filter(Boolean)
+    .join(' ');
+  return `${amount} ${difference > 0 ? 'ahead' : 'behind'}`;
 };
 
-const toLocalInputValue = (date: Date) => {
-  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return localDate.toISOString().slice(0, 16);
+// Accepts 9, 930, 0930, 9:30, 21:05, 9pm, 9:30 am.
+const parseTimeInput = (value: string) => {
+  const match = value
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .match(/^(\d{1,2})(?:[:.h]?(\d{2}))?(am?|pm?)?$/);
+  if (!match) return null;
+
+  let hours = Number(match[1]);
+  const minutes = Number(match[2] ?? 0);
+  const meridiem = match[3];
+  if (meridiem) {
+    if (hours < 1 || hours > 12) return null;
+    hours = (hours % 12) + (meridiem.startsWith('p') ? 12 : 0);
+  }
+  if (hours > 23 || minutes > 59) return null;
+  return { hours, minutes };
 };
+
+// Converts a wall-clock time in `timezone` (expressed as a UTC timestamp) to
+// the actual instant, re-checking the offset in case it crosses a DST change.
+const zonedTimeToDate = (wallClock: number, timezone: string) => {
+  const offset = getOffsetMinutes(new Date(wallClock), timezone);
+  let result = wallClock - offset * 60_000;
+  const correctedOffset = getOffsetMinutes(new Date(result), timezone);
+  if (correctedOffset !== offset) {
+    result = wallClock - correctedOffset * 60_000;
+  }
+  return new Date(result);
+};
+
+const toLocalDateValue = (date: Date) =>
+  [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-');
 
 export const TimezoneConverter = () => {
   const [timezoneList, setTimezoneList] = useAtom(timezoneListAtom);
   const [comparisonTimeValue, setComparisonTimeValue] = useAtom(comparisonTimeAtom);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [invalidTimezone, setInvalidTimezone] = useState<string | null>(null);
+  const skipBlurCommitRef = useRef<string | null>(null);
   const currentMinute = useSyncExternalStore(
     subscribeToClock,
     getMinuteSnapshot,
@@ -121,6 +153,49 @@ export const TimezoneConverter = () => {
     if (params?.timezones?.length) setTimezoneList(params.timezones);
     if (params?.comparisonTime) setComparisonTimeValue(params.comparisonTime);
   }, [setComparisonTimeValue, setTimezoneList]);
+
+  const clearDraft = (timezone: string) => {
+    setDrafts((current) => {
+      const next = { ...current };
+      delete next[timezone];
+      return next;
+    });
+  };
+
+  const commitTime = (timezone: string) => {
+    const draft = drafts[timezone];
+    if (draft === undefined) return;
+
+    const parsed = parseTimeInput(draft);
+    if (!parsed) {
+      setInvalidTimezone(timezone);
+      return;
+    }
+
+    const wallClock =
+      getDateStamp(comparisonTime, timezone) +
+      parsed.hours * 3_600_000 +
+      parsed.minutes * 60_000;
+    setComparisonTimeValue(zonedTimeToDate(wallClock, timezone).toISOString());
+    setInvalidTimezone(null);
+    clearDraft(timezone);
+  };
+
+  const handleDateChange = (value: string) => {
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) return;
+
+    const nextDate = new Date(
+      year,
+      month - 1,
+      day,
+      comparisonTime.getHours(),
+      comparisonTime.getMinutes()
+    );
+    if (Number.isFinite(nextDate.getTime())) {
+      setComparisonTimeValue(nextDate.toISOString());
+    }
+  };
 
   const moveTimezone = (timezone: string, direction: -1 | 1) => {
     const currentIndex = timezoneList.indexOf(timezone);
@@ -144,104 +219,144 @@ export const TimezoneConverter = () => {
 
   return (
     <div className="min-w-0">
-      <div className="flex items-end gap-3 border-b border-border pb-4">
-        <div className="min-w-0 flex-1 sm:flex-none">
-          <label
-            htmlFor="comparison-time"
-            className="mb-2 block text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground"
-          >
-            Your local date & time
-          </label>
+      <div className="flex min-h-10 items-center justify-between gap-3 pb-2 text-[13px]">
+        <div className="relative -ml-2">
           <input
-            id="comparison-time"
-            type="datetime-local"
-            value={toLocalInputValue(comparisonTime)}
-            onChange={(event) => {
-              const nextDate = new Date(event.target.value);
-              if (Number.isFinite(nextDate.getTime())) {
-                setComparisonTimeValue(nextDate.toISOString());
+            id="comparison-date"
+            type="date"
+            value={toLocalDateValue(comparisonTime)}
+            onChange={(event) => handleDateChange(event.target.value)}
+            onClick={(event) => {
+              try {
+                event.currentTarget.showPicker();
+              } catch {
+                // Browsers without showPicker open the picker natively on tap.
               }
             }}
-            className="numeric h-11 w-full max-w-xs rounded-lg border border-input bg-transparent px-3 text-sm outline-none transition-colors focus:border-primary focus:bg-background"
+            className="peer absolute inset-0 h-full w-full cursor-pointer opacity-0"
+            aria-label="Date to compare"
           />
+          <span
+            className="pointer-events-none flex h-10 items-center gap-1 rounded-md px-2 font-medium transition-colors peer-hover:bg-muted peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-ring"
+            aria-hidden="true"
+          >
+            {formatDayLabel(comparisonTime, currentTime)}
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+          </span>
         </div>
-        <button
-          type="button"
-          onClick={() => setComparisonTimeValue(null)}
-          disabled={selectedDate === null}
-          className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-full px-3 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-default disabled:opacity-40"
-        >
-          <RotateCcw className="h-3.5 w-3.5" />
-          Now
-        </button>
+        {selectedDate ? (
+          <button
+            type="button"
+            onClick={() => {
+              setComparisonTimeValue(null);
+              setDrafts({});
+              setInvalidTimezone(null);
+            }}
+            className="-mr-2 h-10 rounded-md px-2 font-medium transition-colors hover:bg-muted"
+          >
+            Reset to now
+          </button>
+        ) : null}
       </div>
 
-      <div className="border-b border-border">
+      <ul className="divide-y divide-border border-t border-border">
         {timezoneList.map((timezone, index) => {
           const formattedTimezone = formatTimezone(timezone, comparisonTime);
+          const abbreviation = formattedTimezone.abbreviation.replace(
+            /^GMT(?=[+-])/,
+            'UTC'
+          );
+          const relativeOffset = formatRelativeOffset(comparisonTime, timezone);
+          const isOtherDay =
+            getDateStamp(comparisonTime, timezone) !==
+            getDateStamp(comparisonTime);
+          const isInvalid = invalidTimezone === timezone;
+
           return (
-            <div
+            <li
               key={timezone}
-              className="row-enter grid min-h-[92px] grid-cols-[minmax(0,1fr)_auto_44px] items-center gap-3 border-t border-border/80 py-4 first:border-t-0"
+              className="group grid grid-cols-[minmax(0,1fr)_auto_auto] items-start gap-3 py-3"
             >
-              <div className="min-w-0 pl-3">
-                <p className="truncate text-sm font-bold">
+              <div className="min-w-0 pt-2.5">
+                <p className="truncate text-[15px] font-semibold leading-5">
                   {formattedTimezone.main}
                 </p>
-                <p className="mt-1 truncate text-xs text-muted-foreground">
-                  {formattedTimezone.sub}
+                <p className="truncate text-[13px] leading-5 text-muted-foreground">
+                  {abbreviation ? `${abbreviation}, ${relativeOffset}` : relativeOffset}
                 </p>
               </div>
 
               <div className="text-right">
-                <p className="numeric text-2xl font-semibold sm:text-3xl">
-                  {formatTime(comparisonTime, timezone)}
-                </p>
-                <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                  {formatRelativeOffset(comparisonTime, timezone)} ·{' '}
-                  {formatDayContext(comparisonTime, timezone)}
-                </p>
+                <label className="sr-only" htmlFor={`time-${timezone}`}>
+                  Time in {formattedTimezone.main}
+                </label>
+                <input
+                  id={`time-${timezone}`}
+                  className={cn(
+                    'h-10 w-24 rounded-md bg-transparent px-1 text-right text-[28px] font-normal tabular-nums tracking-tight caret-primary outline-none transition-colors hover:bg-muted/60 focus:bg-muted focus:shadow-[inset_0_-2px_0_hsl(var(--primary))] focus-visible:outline-none',
+                    isInvalid &&
+                      'shadow-[inset_0_-2px_0_hsl(var(--destructive))] focus:shadow-[inset_0_-2px_0_hsl(var(--destructive))]'
+                  )}
+                  value={drafts[timezone] ?? formatTime(comparisonTime, timezone)}
+                  inputMode="numeric"
+                  autoComplete="off"
+                  enterKeyHint="done"
+                  title={`Type a time in ${formattedTimezone.main}`}
+                  {...selectAllOnFocus}
+                  onChange={(event) => {
+                    const { value } = event.target;
+                    setDrafts((current) => ({ ...current, [timezone]: value }));
+                    setInvalidTimezone(null);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.currentTarget.blur();
+                    }
+                    if (event.key === 'Escape') {
+                      skipBlurCommitRef.current = timezone;
+                      clearDraft(timezone);
+                      setInvalidTimezone(null);
+                      event.currentTarget.blur();
+                    }
+                  }}
+                  onBlur={() => {
+                    if (skipBlurCommitRef.current === timezone) {
+                      skipBlurCommitRef.current = null;
+                      return;
+                    }
+                    commitTime(timezone);
+                  }}
+                  aria-invalid={isInvalid}
+                  aria-describedby={isInvalid ? `time-${timezone}-error` : undefined}
+                />
+                {isInvalid ? (
+                  <p
+                    id={`time-${timezone}-error`}
+                    className="whitespace-nowrap pr-1 text-[13px] leading-7 text-destructive"
+                    role="alert"
+                  >
+                    Use a time like 9:30
+                  </p>
+                ) : (
+                  <p className="h-7 pr-1 text-[13px] leading-7 text-muted-foreground">
+                    {isOtherDay
+                      ? formatDayLabel(comparisonTime, currentTime, timezone)
+                      : null}
+                  </p>
+                )}
               </div>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                    aria-label={`Open ${formattedTimezone.main} actions`}
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={() => moveTimezone(timezone, -1)}
-                    disabled={index === 0}
-                  >
-                    <ChevronUp className="mr-2 h-4 w-4" />
-                    Move up
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => moveTimezone(timezone, 1)}
-                    disabled={index === timezoneList.length - 1}
-                  >
-                    <ChevronDown className="mr-2 h-4 w-4" />
-                    Move down
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => removeTimezone(timezone)}
-                    disabled={timezoneList.length <= 1}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Remove
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+              <RowActions
+                label={formattedTimezone.main}
+                index={index}
+                count={timezoneList.length}
+                onMove={(direction) => moveTimezone(timezone, direction)}
+                onRemove={() => removeTimezone(timezone)}
+              />
+            </li>
           );
         })}
-      </div>
+      </ul>
 
       <TimezoneInput />
     </div>
