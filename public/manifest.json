@@ -4,12 +4,12 @@
   "display": "standalone",
   "scope": "/",
   "start_url": "/",
-  "name": "Current — Currency & Time",
-  "short_name": "Current",
+  "name": "Currency",
+  "short_name": "Currency",
   "description": "Quick converter for checking money amounts and time differences in one simple screen.",
   "icons": [
     {
-      "src": "/icons/current.svg",
+      "src": "/icons/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"

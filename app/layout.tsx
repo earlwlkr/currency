@@ -7,14 +7,14 @@ import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 
 export const metadata: Metadata = {
-  title: 'Current — Currency & Time',
+  title: 'Currency',
   description: 'Quick converter for checking money amounts and time differences in one simple screen.',
   generator: 'Next.js',
   manifest: '/manifest.json',
   keywords: ['nextjs', 'pwa', 'next-pwa', 'currency', 'currencies'],
   authors: [{ name: 'earlwlkr' }],
   icons: [
-    { rel: 'icon', url: '/icons/current.svg', type: 'image/svg+xml' },
+    { rel: 'icon', url: '/icons/icon.svg', type: 'image/svg+xml' },
     { rel: 'apple-touch-icon', url: '/icons/icon-192x192.png' },
   ],
 };
