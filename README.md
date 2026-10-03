@@ -4,9 +4,9 @@ A compact utility app for:
 - converting one amount into multiple currencies at once
 - converting time across timezones
 
-The home screen combines both tools:
-- `currency` section for multi-currency conversion
-- `timezone` section for timezone conversion
+The home screen switches between two workspaces:
+- **Currency** for multi-currency conversion
+- **Time** for converting a time across cities and time zones
 
 ## Tech stack
 - Next.js (App Router)

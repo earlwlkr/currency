@@ -1,4 +1,4 @@
-import { atom, createStore } from 'jotai';
+import { atom } from 'jotai';
 
 import { atomWithAsyncStorage } from '@/lib/asyncStorage';
 
@@ -22,5 +22,3 @@ export const timezoneListAtom = atomWithAsyncStorage('timezoneList', [
 ], isTimezoneList);
 
 export const comparisonTimeAtom = atom<string | null>(null);
-
-export const store = createStore();

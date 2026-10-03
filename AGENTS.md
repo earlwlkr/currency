@@ -1,6 +1,6 @@
 # Agent Instructions
 
-This is a Next.js 14 PWA for currency and timezone conversion using TypeScript, Tailwind CSS, and shadcn/ui components.
+This is a Next.js 16 PWA for currency and timezone conversion using TypeScript, Tailwind CSS, and shadcn/ui components.
 
 ## Build/Lint/Test Commands
 
@@ -61,7 +61,7 @@ Input.displayName = 'Input';
 - Hooks: camelCase with `use` prefix (e.g., `useCurrencyContext`)
 - Utilities: camelCase (e.g., `lib/utils.ts`)
 - Types/Interfaces: PascalCase (e.g., `InputProps`)
-- Atoms: camelCase with suffix (e.g., `baseAccordionAtom`)
+- Atoms: camelCase with suffix (e.g., `timezoneListAtom`)
 
 ### Error Handling
 - Use early returns for null checks
@@ -77,10 +77,11 @@ Example atom definition:
 ```typescript
 import { atomWithAsyncStorage } from '@/lib/asyncStorage';
 
-export const baseAccordionAtom = atomWithAsyncStorage(
-  'baseAccordion',
-  ['currency'] as string[] | string
-);
+export const timezoneListAtom = atomWithAsyncStorage('timezoneList', [
+  'Asia/Saigon',
+  'America/New_York',
+  'Europe/London',
+], isTimezoneList); // optional validator for stored values
 ```
 
 ### shadcn/ui Conventions
@@ -115,7 +116,8 @@ public/              # Static assets, PWA files
 
 ### Utilities
 - `lib/utils.ts` - cn() and general utilities
-- `lib/atoms.ts` - Jotai atoms
+- `lib/timezoneAtoms.ts` - Jotai atoms
+- `lib/CurrencyContext.tsx` - currency state and exchange rates
 - `lib/asyncStorage.ts` - IndexedDB storage helpers
 
 ### Configuration
@@ -124,7 +126,7 @@ public/              # Static assets, PWA files
 
 ## Key Dependencies
 
-- **Framework:** Next.js 14 (App Router)
+- **Framework:** Next.js 16 (App Router, built with webpack)
 - **State:** Jotai
 - **Styling:** Tailwind CSS + shadcn/ui
 - **Icons:** Lucide React

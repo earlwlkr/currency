@@ -53,7 +53,7 @@ const hasRates = (rates: Partial<CurrencyRates>): rates is CurrencyRates =>
       Object.values(rates.usd).some((rate) => Number.isFinite(rate))
   );
 
-export const fetchCurrencyRates = async (
+const fetchCurrencyRates = async (
   forceRefresh = false
 ): Promise<CurrencyRatesResult> => {
   const canPersist = typeof indexedDB !== 'undefined';

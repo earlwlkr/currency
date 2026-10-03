@@ -1,6 +1,6 @@
 import cityTimezones from 'city-timezones';
 
-export const TIMEZONE_ABBREVIATIONS: Record<string, string> = {
+const TIMEZONE_ABBREVIATIONS: Record<string, string> = {
     // Generic US zone names (no standard/daylight letter) follow DST automatically
     PT: 'America/Los_Angeles',
     MT: 'America/Denver',
