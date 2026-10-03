@@ -91,17 +91,14 @@ export function searchTimezones(query: string): SearchResult[] {
     // Sort by population descending
     cityMatches.sort((a, b) => b.pop - a.pop);
 
-    // Optimization: Loop until we hit the limit
-    for (const city of cityMatches) {
-        if (results.length >= MAX_RESULTS) break;
-
+    const addCity = (city: (typeof cityMatches)[number]) => {
         let id = city.timezone;
         try {
             // Resolve alias (e.g., Asia/Ho_Chi_Minh -> Asia/Saigon)
             id = new Intl.DateTimeFormat('en-US', { timeZone: id }).resolvedOptions().timeZone;
         } catch (e) {
             // Invalid timezone in data, skip
-            continue;
+            return;
         }
 
         if (allTimezones.includes(id)) {
@@ -110,6 +107,26 @@ export function searchTimezones(query: string): SearchResult[] {
             const fmt = formatTimezone(id);
             addResult(id, label, fmt.sub);
         }
+    };
+
+    // Cities that matched only through their country name (e.g. "pt" in "Egypt")
+    // rank below time zone and offset matches.
+    const queryTerms = [query, simplifiedQuery].flatMap((q) => q.toLowerCase().split(' ')).filter(Boolean);
+    const matchesPlaceName = (city: (typeof cityMatches)[number]) => {
+        const place = [city.city, city.state_ansi, city.province].join().toLowerCase();
+        return queryTerms.some((term) => place.includes(term));
+    };
+    const countryOnlyMatches: typeof cityMatches = [];
+
+    // Optimization: Loop until we hit the limit
+    for (const city of cityMatches) {
+        if (results.length >= MAX_RESULTS) break;
+
+        if (!matchesPlaceName(city)) {
+            countryOnlyMatches.push(city);
+            continue;
+        }
+        addCity(city);
     }
 
     // 3. IANA Timezone Search (Fallback and complementary)
@@ -146,6 +163,12 @@ export function searchTimezones(query: string): SearchResult[] {
                 // Ignore offsets outside the supported IANA range.
             }
         }
+    }
+
+    // 5. Cities matched only by country
+    for (const city of countryOnlyMatches) {
+        if (results.length >= MAX_RESULTS) break;
+        addCity(city);
     }
 
     return results;
