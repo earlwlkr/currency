@@ -3,9 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
+import { cn } from '@/lib/utils';
+
 type HistoricalRateSparklineProps = {
-  baseCurrency: string;
-  currency: string;
+  from: string;
+  to: string;
+  label: string;
 };
 
 type Point = {
@@ -141,8 +144,9 @@ function buildSparklinePath(points: Point[]) {
 }
 
 export function HistoricalRateSparkline({
-  baseCurrency,
-  currency,
+  from,
+  to,
+  label,
 }: HistoricalRateSparklineProps) {
   const [points, setPoints] = useState<Point[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -151,7 +155,7 @@ export function HistoricalRateSparkline({
   useEffect(() => {
     let isCancelled = false;
 
-    if (!isExpanded || baseCurrency === currency) {
+    if (!isExpanded || from === to) {
       return;
     }
 
@@ -166,7 +170,7 @@ export function HistoricalRateSparkline({
           .map((result, index) => {
             if (result.status !== 'fulfilled') return null;
             const rates = result.value;
-            const rate = calculatePairRate(rates, baseCurrency, currency);
+            const rate = calculatePairRate(rates, from, to);
             if (rate === null || !Number.isFinite(rate)) {
               return null;
             }
@@ -194,7 +198,7 @@ export function HistoricalRateSparkline({
     return () => {
       isCancelled = true;
     };
-  }, [baseCurrency, currency, isExpanded]);
+  }, [from, to, isExpanded]);
 
   const trend = useMemo(() => {
     if (points.length < 2) {
@@ -206,58 +210,72 @@ export function HistoricalRateSparkline({
     const delta = ((last - first) / first) * 100;
 
     return {
-      last,
       delta,
       startDate: points[0].date,
       endDate: points[points.length - 1].date,
     };
   }, [points]);
 
-  if (baseCurrency === currency) {
+  if (from === to) {
     return null;
   }
 
   const isUp = (trend?.delta ?? 0) >= 0;
   const path = buildSparklinePath(points);
-  const strokeClass = isUp ? 'stroke-emerald-500' : 'stroke-rose-500';
-  const fillClass = isUp ? 'text-emerald-500/10' : 'text-rose-500/10';
 
   return (
-    <div className="mt-0.5 flex flex-col items-end">
+    <div className="flex flex-col items-end">
       <button
         type="button"
         onClick={() => setIsExpanded((value) => !value)}
-        className="flex min-h-7 items-center gap-1.5 rounded-full px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        className="inline-flex h-7 max-w-full items-center gap-1 rounded-md px-1 text-[13px] tabular-nums text-muted-foreground transition-colors hover:text-foreground"
         aria-expanded={isExpanded}
+        title="Show 7-day trend"
       >
-        <span>{trend ? '7d' : '7d trend'}</span>
-        {trend ? (
-          <span className={isUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}>
-            {isUp ? '+' : ''}{trend.delta.toFixed(2)}%
-          </span>
-        ) : null}
-        <ChevronDown className={`h-3 w-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+        <span className="truncate">{label}</span>
+        <ChevronDown
+          className={cn(
+            'h-3.5 w-3.5 shrink-0 transition-transform',
+            isExpanded && 'rotate-180'
+          )}
+          aria-hidden="true"
+        />
       </button>
       {isExpanded ? (
-        status === 'loading' ? (
-          <p className="py-2 text-[11px] text-muted-foreground">Loading trend…</p>
-        ) : status === 'error' || !trend ? (
-          <p className="py-2 text-[11px] text-muted-foreground">Trend unavailable</p>
-        ) : (
-          <div className="flex items-center justify-end gap-3 pb-1 pt-1">
-            <p className="text-[11px] font-medium text-muted-foreground">
-              1 {baseCurrency} ≈ {trend.last.toFixed(4)} {currency}
+        status === 'ready' && trend ? (
+          <div className="flex items-center gap-3 px-1 pb-1 pt-0.5">
+            <p
+              className={cn(
+                'text-[13px] tabular-nums',
+                isUp
+                  ? 'text-emerald-700 dark:text-emerald-400'
+                  : 'text-rose-700 dark:text-rose-400'
+              )}
+            >
+              {isUp ? '+' : ''}
+              {trend.delta.toFixed(2)}% in 7 days
             </p>
             <svg
               viewBox="0 0 120 32"
-              className="h-7 w-[104px] shrink-0 overflow-visible"
+              className="h-6 w-20 shrink-0 overflow-visible"
               role="img"
-              aria-label={`Seven day trend from ${formatDayLabel(trend.startDate)} to ${formatDayLabel(trend.endDate)}`}
+              aria-label={`${from} to ${to}, ${formatDayLabel(trend.startDate)} to ${formatDayLabel(trend.endDate)}`}
             >
-              <path d={`M 0 32 ${path} L 120 32 Z`} className={fillClass} fill="currentColor" />
-              <path d={path} className={strokeClass} fill="none" strokeWidth="2" strokeLinecap="round" />
+              <path
+                d={path}
+                className={isUp ? 'stroke-emerald-500' : 'stroke-rose-500'}
+                fill="none"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+              />
             </svg>
           </div>
+        ) : (
+          <p className="px-1 pb-1 text-[13px] text-muted-foreground">
+            {status === 'error' ? '7-day trend unavailable' : 'Loading 7-day trend…'}
+          </p>
         )
       ) : null}
     </div>

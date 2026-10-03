@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Clock3, Coins } from 'lucide-react';
 
 import { CurrencyInput } from '@/components/CurrencyInput';
 import { CurrencyListOutput } from '@/components/CurrencyListOutput';
@@ -13,89 +12,72 @@ import { cn } from '@/lib/utils';
 
 type Workspace = 'currency' | 'time';
 
+const WORKSPACES: { value: Workspace; label: string }[] = [
+  { value: 'currency', label: 'Currency' },
+  { value: 'time', label: 'Time' },
+];
+
+// A shared link decides the workspace; otherwise reopen the last one used.
+const getInitialWorkspace = (): Workspace => {
+  const sharedWorkspace = getUrlParams()?.workspace;
+  if (sharedWorkspace) return sharedWorkspace;
+  try {
+    return localStorage.getItem('workspace') === 'time' ? 'time' : 'currency';
+  } catch {
+    return 'currency';
+  }
+};
+
 function ConverterWorkspace() {
-  const [activeWorkspace, setActiveWorkspace] = useState<Workspace>(
-    () => getUrlParams()?.workspace ?? 'currency'
-  );
+  const [activeWorkspace, setActiveWorkspace] =
+    useState<Workspace>(getInitialWorkspace);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('workspace', activeWorkspace);
+    } catch {
+      // Switching still works when storage is unavailable.
+    }
+  }, [activeWorkspace]);
 
   return (
-    <main className="min-h-svh bg-background">
-      <header className="border-b border-border/80">
-        <div className="relative mx-auto flex h-16 w-full max-w-6xl items-center gap-4 px-4 sm:px-6 lg:px-8">
-          <div className="flex min-w-0 items-center gap-3">
-            <span
-              className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-foreground text-[11px] font-bold tracking-[-0.05em] text-background"
-              aria-hidden="true"
+    <div className="mx-auto w-full max-w-xl px-4 pb-[max(3rem,env(safe-area-inset-bottom))] pt-[env(safe-area-inset-top)] sm:px-6 sm:pt-[max(2rem,env(safe-area-inset-top))]">
+      <header className="flex h-16 items-center justify-between gap-4">
+        <nav className="-ml-2 flex items-center" aria-label="Converter">
+          {WORKSPACES.map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setActiveWorkspace(value)}
+              className={cn(
+                'h-11 rounded-md px-2 text-xl font-semibold tracking-tight transition-colors',
+                activeWorkspace === value
+                  ? 'text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+              aria-pressed={activeWorkspace === value}
             >
-              CR
-            </span>
-            <div className="hidden min-w-0 sm:block">
-              <h1 className="truncate text-sm font-bold uppercase tracking-[0.16em]">
-                Current
-              </h1>
-              <p className="hidden text-[11px] text-muted-foreground sm:block">
-                Money and time, aligned
-              </p>
-            </div>
-          </div>
-
-          <nav
-            className="absolute left-1/2 flex -translate-x-1/2 items-center rounded-full bg-muted p-1"
-            aria-label="Converter workspace"
-          >
-            {([
-              ['currency', 'Currency', Coins],
-              ['time', 'Time', Clock3],
-            ] as const).map(([value, label, Icon]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setActiveWorkspace(value)}
-                className={cn(
-                  'flex h-9 items-center gap-2 rounded-full px-3 text-xs font-semibold transition-[background-color,color,transform] duration-200 sm:px-4',
-                  activeWorkspace === value
-                    ? 'bg-background text-foreground shadow-[0_1px_4px_rgba(20,20,16,0.08)]'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
-                aria-pressed={activeWorkspace === value}
-              >
-                <Icon className="hidden h-3.5 w-3.5 sm:block" />
-                {label}
-              </button>
-            ))}
-          </nav>
-
-          <div className="ml-auto">
-            <ShareButton workspace={activeWorkspace} />
-          </div>
-        </div>
+              {label}
+            </button>
+          ))}
+        </nav>
+        <ShareButton workspace={activeWorkspace} />
       </header>
 
-      <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
+      <main>
         <section
-          className={cn(
-            'workspace-enter',
-            activeWorkspace !== 'currency' && 'hidden'
-          )}
+          hidden={activeWorkspace !== 'currency'}
           aria-label="Currency converter"
         >
-          <div className="min-w-0">
-            <CurrencyListOutput />
-            <CurrencyInput />
-          </div>
+          <CurrencyListOutput />
+          <CurrencyInput />
         </section>
 
-        <section
-          className={cn(
-            'workspace-enter',
-            activeWorkspace !== 'time' && 'hidden'
-          )}
-          aria-label="Time converter"
-        >
+        <section hidden={activeWorkspace !== 'time'} aria-label="Time converter">
           <TimezoneConverter />
         </section>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }
 
@@ -108,11 +90,7 @@ export default function Home() {
   }, []);
 
   if (!isHydrated) {
-    return (
-      <main className="grid min-h-svh place-items-center bg-background" aria-label="Loading converter">
-        <span className="h-5 w-5 animate-pulse rounded-full bg-primary" aria-hidden="true" />
-      </main>
-    );
+    return <div className="min-h-svh" aria-busy="true" />;
   }
 
   return (

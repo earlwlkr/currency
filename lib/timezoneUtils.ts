@@ -1,6 +1,12 @@
 import cityTimezones from 'city-timezones';
 
 export const TIMEZONE_ABBREVIATIONS: Record<string, string> = {
+    // Generic US zone names (no standard/daylight letter) follow DST automatically
+    PT: 'America/Los_Angeles',
+    MT: 'America/Denver',
+    CT: 'America/Chicago',
+    ET: 'America/New_York',
+    AKT: 'America/Anchorage',
     AEST: 'Australia/Sydney',
     AEDT: 'Australia/Sydney',
     ACST: 'Australia/Adelaide',
@@ -17,8 +23,8 @@ export const TIMEZONE_ABBREVIATIONS: Record<string, string> = {
     HST: 'Pacific/Honolulu',
     AKST: 'America/Anchorage',
     AKDT: 'America/Anchorage',
-    // GMT: 'Etc/GMT',
-    // UTC: 'Etc/UTC',
+    UTC: 'Etc/UTC',
+    GMT: 'Etc/UTC',
     CET: 'Europe/Paris',
     CEST: 'Europe/Paris',
     EET: 'Europe/Athens',
@@ -175,6 +181,7 @@ export function formatTimezone(timezone: string, date = new Date()): {
     main: string;
     sub: string;
     alt: string;
+    abbreviation: string;
 } {
     try {
         const formatter = new Intl.DateTimeFormat('en-US', {
@@ -200,9 +207,9 @@ export function formatTimezone(timezone: string, date = new Date()): {
 
         // Handle Etc/GMT cases
         if (timezone.startsWith('Etc/')) {
-            const main = offset === 'GMT' ? 'UTC' : offset.replace('GMT', 'UTC');
+            const main = offset === 'GMT' || offset === 'GMT+00:00' ? 'UTC' : offset.replace('GMT', 'UTC');
             const sub = 'Fixed offset';
-            return { main, sub, alt: `${main} (${sub})` };
+            return { main, sub, alt: `${main} (${sub})`, abbreviation: main };
         }
 
         // Handle Region/City cases
@@ -226,11 +233,11 @@ export function formatTimezone(timezone: string, date = new Date()): {
             }
 
             const sub = parts.join(' • ');
-            return { main, sub, alt: `${main} (${sub})` };
+            return { main, sub, alt: `${main} (${sub})`, abbreviation };
         }
 
-        return { main: timezone, sub: offset, alt: `${timezone} (${offset})` };
+        return { main: timezone, sub: offset, alt: `${timezone} (${offset})`, abbreviation };
     } catch (e) {
-        return { main: timezone, sub: '', alt: timezone };
+        return { main: timezone, sub: '', alt: timezone, abbreviation: '' };
     }
 }

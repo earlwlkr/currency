@@ -62,31 +62,31 @@ export function ShareButton({ workspace }: ShareButtonProps) {
     }
   };
 
+  const isDone = status === 'copied' || status === 'shared';
+  const label =
+    status === 'shared'
+      ? 'Shared'
+      : status === 'copied'
+        ? 'Link copied'
+        : status === 'failed'
+          ? 'Couldn’t copy link'
+          : 'Share';
+
   return (
     <button
       type="button"
       onClick={handleShare}
-      className="flex h-10 shrink-0 items-center gap-2 rounded-full border border-border/80 px-3 text-xs font-semibold text-foreground transition-colors hover:border-foreground/30 hover:bg-muted sm:px-4"
-      title="Share this setup"
-      aria-label="Share current setup"
-      aria-live="polite"
+      className="-mr-2 flex h-10 shrink-0 items-center gap-2 rounded-md px-2 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      title="Share a link to this setup"
     >
-      {status === 'copied' || status === 'shared' ? (
-        <>
-          <Check className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">{status === 'shared' ? 'Shared' : 'Copied'}</span>
-        </>
-      ) : status === 'failed' ? (
-        <>
-          <Link2 className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Copy failed</span>
-        </>
+      {isDone ? (
+        <Check className="h-4 w-4" aria-hidden="true" />
       ) : (
-        <>
-          <Link2 className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Share</span>
-        </>
+        <Link2 className="h-4 w-4" aria-hidden="true" />
       )}
+      <span className="sr-only sm:not-sr-only" aria-live="polite">
+        {label}
+      </span>
     </button>
   );
 }
