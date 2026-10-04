@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   authors: [{ name: 'earlwlkr' }],
   icons: [
     { rel: 'icon', url: '/icons/icon.svg', type: 'image/svg+xml' },
-    { rel: 'apple-touch-icon', url: '/icons/icon-192x192.png' },
+    { rel: 'apple-touch-icon', url: '/icons/apple-touch-icon.png' },
   ],
 };
 
